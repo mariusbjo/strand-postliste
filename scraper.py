@@ -183,24 +183,26 @@ def render_html(dokumenter):
         )
         cards_html.append(card)
 
+# inne i render_html
         # Duplisert oppføring for innsyn
         if dok.get("krever_innsyn"):
-    dup_title = f"Innsyn: {dok.get('tittel') or 'Uten tittel'}"
-    dup_actions = []
-    dup_actions.append(
-        f"<a class='btn' href='{lag_mailto_innsyn(dok)}'>Send innsynsbegjæring</a>"
-    )
-    if dok.get("detalj_link"):
-        dup_actions.append(
-            f"<a class='btn' href='{dok['detalj_link']}' target='_blank' rel='noopener'>Detaljer</a>"
-        )
+            dup_title = f"Innsyn: {dok.get('tittel') or 'Uten tittel'}"
+            dup_actions = []
+            dup_actions.append(
+                f"<a class='btn' href='{lag_mailto_innsyn(dok)}'>Send innsynsbegjæring</a>"
+            )
+            if dok.get("detalj_link"):
+                dup_actions.append(
+                    f"<a class='btn' href='{dok['detalj_link']}' target='_blank' rel='noopener'>Detaljer</a>"
+                )
 
-    dup_card = (
-        "<section class='card'>"
-        f"<h3>{dup_title}</h3>"
-        f"<div class='meta'>{meta_html}</div>"
-        "<div><span class='badge innsyn'>Må bes om innsyn</span></div>"
-        f"<div class='actions'>{' '.join(dup_actions)}</div>"
-        "</section>"
-    )
-    cards_html.append(dup_card)
+            dup_card = (
+                "<section class='card'>"
+                f"<h3>{dup_title}</h3>"
+                f"<div class='meta'>{meta_html}</div>"
+                "<div><span class='badge innsyn'>Må bes om innsyn</span></div>"
+                f"<div class='actions'>{' '.join(dup_actions)}</div>"
+                "</section>"
+            )
+            cards_html.append(dup_card)
+
