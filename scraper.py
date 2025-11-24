@@ -126,87 +126,61 @@ def lag_mailto_innsyn(dok):
 # ------------------- HTML-rendering -------------------
 
 def render_html(dokumenter):
-    base_path = os.path.join(TEMPLATES_DIR, "base.html")
-    if not os.path.exists(base_path):
-        with open(base_path, "w", encoding="utf-8") as f:
-            f.write("""<!doctype html>
+    """
+    Lager en enkel index.html med dokumentene.
+    Hvis listen er tom, vises en melding.
+    """
+    # Bygg innhold
+    if not dokumenter:
+        content = "<p>Ingen dokumenter funnet i postlisten.</p>"
+    else:
+        cards = []
+        for dok in dokumenter:
+            title = dok.get("tittel") or "Uten tittel"
+            meta = f"Dato: {dok.get('dato','')} · Saksnr: {dok.get('saksnr','')}"
+            actions = []
+            if dok.get("pdf_link"):
+                actions.append(f"<a href='{dok['pdf_link']}' target='_blank'>Åpne PDF</a>")
+            elif dok.get("detalj_link"):
+                actions.append(f"<a href='{dok['detalj_link']}' target='_blank'>Detaljer</a>")
+            if dok.get("krever_innsyn"):
+                actions.append(f"<a href='{lag_mailto_innsyn(dok)}'>Be om innsyn</a>")
+
+            card = (
+                "<section class='card'>"
+                f"<h3>{title}</h3>"
+                f"<div class='meta'>{meta}</div>"
+                f"<div class='actions'>{' '.join(actions)}</div>"
+                "</section>"
+            )
+            cards.append(card)
+        content = "\n".join(cards)
+
+    # Minimal HTML-mal
+    html = f"""<!doctype html>
 <html lang="no">
 <head>
   <meta charset="utf-8">
-  <title>Strand kommune – uoffisiell postliste speilet</title>
+  <title>Strand kommune – uoffisiell postliste</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="./assets/styles.css" rel="stylesheet">
+  <style>
+    body {{ font-family: sans-serif; margin: 2rem; background: #fafafa; }}
+    .card {{ background: #fff; padding: 1rem; margin-bottom: 1rem; border: 1px solid #ddd; }}
+    .meta {{ color: #555; font-size: 0.9em; margin-bottom: 0.5rem; }}
+    .actions a {{ margin-right: 1rem; }}
+  </style>
 </head>
 <body>
-<header>
   <h1>Postliste – Strand kommune (uoffisiell speiling)</h1>
-  <p>Generert automatisk. Kilde: Strand kommune. Denne siden publiseres av en privat aktør.</p>
-</header>
-<main>
-  <!-- CONTENT -->
-</main>
-<footer>
-  <p>Oppdatert: {{timestamp}}</p>
-</footer>
+  <p>Oppdatert: {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
+  {content}
 </body>
-</html>""")
+</html>
+"""
 
-    css_path = os.path.join(ASSETS_DIR, "styles.css")
-    if not os.path.exists(css_path):
-        with open(css_path, "w", encoding="utf-8") as f:
-            f.write("body{font-family:sans-serif;margin:0;padding:0;background:#fafafa;color:#222}")
+    out_path = os.path.join(OUTPUT_DIR, "index.html")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html)
 
-    cards_html = []
-    for dok in dokumenter:
-        badges = []
-        if dok.get("pdf_link"):
-            badges.append('<span class="badge pdf">PDF</span>')
-        if dok.get("krever_innsyn"):
-            badges.append('<span class="badge innsyn">Krever innsyn</span>')
+    print(f"Skrev index.html til {out_path}")
 
-        meta_parts = []
-        if dok.get("dato"): meta_parts.append(f"Dato: {dok['dato']}")
-        if dok.get("saksnr"): meta_parts.append(f"Saksnr: {dok['saksnr']}")
-        if dok.get("avsender"): meta_parts.append(f"Avsender: {dok['avsender']}")
-        if dok.get("mottaker"): meta_parts.append(f"Mottaker: {dok['mottaker']}")
-        meta_html = " · ".join(meta_parts)
-
-        actions = []
-        if dok.get("pdf_link"):
-            actions.append(f"<a class='btn' href='{dok['pdf_link']}' target='_blank'>Åpne PDF</a>")
-        elif dok.get("detalj_link"):
-            actions.append(f"<a class='btn' href='{dok['detalj_link']}' target='_blank'>Detaljer</a>")
-        if dok.get("krever_innsyn"):
-            actions.append(f"<a class='btn' href='{lag_mailto_innsyn(dok)}'>Be om innsyn</a>")
-
-        card = (
-            "<section class='card'>"
-            f"<h3>{dok.get('tittel') or 'Uten tittel'}</h3>"
-            f"<div class='meta'>{meta_html}</div>"
-            f"<div>{' '.join(badges)}</div>"
-            f"<div class='actions'>{' '.join(actions)}</div>"
-            "</section>"
-        )
-        cards_html.append(card)
-
-        if dok.get("krever_innsyn"):
-            dup_title = f"Innsyn: {dok.get('tittel') or 'Uten tittel'}"
-            dup_actions = []
-            dup_actions.append(
-                f"<a class='btn' href='{lag_mailto_innsyn(dok)}'>Send innsynsbegjæring</a>"
-            )
-            if dok.get("detalj_link"):
-                dup_actions.append(
-                    f"<a class='btn' href='{dok['detalj_link']}' target='_blank' rel='noopener'>Detaljer</a>"
-                )
-
-            dup_card = (
-                "<section class='card'>"
-                f"<h3>{dup_title}</h3>"
-                f"<div class='meta'>{meta_html}</div>"
-                "<div><span class='badge innsyn'>Må bes om innsyn</span></div>"
-                f"<div class='actions'>{' '.join(dup_actions)}</div>"
-                "</section>"
-            )
-
-        cards_html.append(dup_card)
