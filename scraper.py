@@ -7,6 +7,7 @@ from urllib.parse import urljoin, quote
 import requests
 from bs4 import BeautifulSoup
 
+# Grunnleggende konfigurasjon
 BASE_URL = "https://www.strand.kommune.no"
 POSTLISTE_URL = "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/"
 
@@ -19,7 +20,9 @@ os.makedirs(PDF_DIR, exist_ok=True)
 os.makedirs(TEMPLATES_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
-POSTMOTTAK_EMAIL = "postmottak@strand.kommune.no"  # endre hvis annen adresse er riktig
+POSTMOTTAK_EMAIL = "postmottak@strand.kommune.no"  # endre hvis kommunen bruker en annen adresse
+
+# ------------------- Hjelpefunksjoner -------------------
 
 def hent_html(url):
     headers = {"User-Agent": "Mozilla/5.0 (compatible; PostlisteScraper/1.0)"}
@@ -114,6 +117,8 @@ def lag_mailto_innsyn(dok):
     body = "\n".join(body_lines)
     return f"mailto:{POSTMOTTAK_EMAIL}?subject={quote(emne)}&body={quote(body)}"
 
+# ------------------- HTML-rendering -------------------
+
 def render_html(dokumenter):
     base_path = os.path.join(TEMPLATES_DIR, "base.html")
     if not os.path.exists(base_path):
@@ -187,25 +192,4 @@ def render_html(dokumenter):
               <div class="meta">{meta_html}</div>
               <div><span class="badge innsyn">Må bes om innsyn</span></div>
               <div class="actions">
-                <a class="btn" href="{lag_mailto_innsyn(dok)}">Send innsynsbegjæring</a>
-                {f"<a class='btn' href='{dok['detalj_link']}' target='_blank' rel='noopener'>Detaljer</a>" if dok.get("detalj_link") else ""}
-              </div>
-            </section>
-            """
-            cards_html.append(dup_card)
-
-    # Bygg hele innholdet
-    content = '<div class="list">\n' + '\n'.join(cards_html) + '\n</div>'
-
-    # Sett inn i base.html
-    with open(base_path, "r", encoding="utf-8") as f:
-        template = f.read()
-
-    html = template.replace("<!-- CONTENT -->", content).replace(
-        "{{timestamp}}",
-        datetime.now().strftime("%Y-%m-%d %H:%M")
-    )
-
-    out_path = os.path.join(OUTPUT_DIR, "index.html")
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write(html)
+                <a class="btn" href="{lag_mailto_innsyn(dok)}
