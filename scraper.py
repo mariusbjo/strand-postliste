@@ -6,7 +6,10 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.strand.kommune.no"
-POSTLISTE_URL = "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/"
+POSTLISTE_BASE = (
+    "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/"
+    "postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/"
+)
 OUTPUT_DIR = "."
 POSTMOTTAK_EMAIL = "postmottak@strand.kommune.no"
 
@@ -17,58 +20,50 @@ def hent_html(url):
     return r.text
 
 def parse_postliste(html):
-    """
-    Parser HTML fra Strand kommunes postliste (ACOS).
-    Returnerer en liste med dokumenter.
-    """
     soup = BeautifulSoup(html, "html.parser")
     dokumenter = []
 
-    # Hent alle oppføringer
     articles = soup.select("article.bc-content-teaser--item")
-
     for art in articles:
-        # Tittel
         title_elem = art.select_one(".bc-content-teaser-title-text")
         tittel = title_elem.get_text(strip=True) if title_elem else ""
 
-        # DokumentID
         dokid_elem = art.select_one(".bc-content-teaser-meta-property--dokumentID dd")
         saksnr = dokid_elem.get_text(strip=True) if dokid_elem else ""
 
-        # Dato
         dato_elem = art.select_one(".bc-content-teaser-meta-property--dato dd")
         dato = dato_elem.get_text(strip=True) if dato_elem else ""
 
-        # Avsender/mottaker finnes ikke alltid i teaser, kan være tomme
-        avsender = ""
-        mottaker = ""
-
-        # Lenker – sjekk om det finnes <a> inne i artikkelen
         link_tag = art.find("a")
-        pdf_link, detalj_link = None, None
-        if link_tag and link_tag.has_attr("href"):
-            href = link_tag["href"]
-            if href.lower().endswith(".pdf"):
-                pdf_link = urljoin(BASE_URL, href)
-            else:
-                detalj_link = urljoin(BASE_URL, href)
+        detalj_link = urljoin(BASE_URL, link_tag["href"]) if link_tag and link_tag.has_attr("href") else None
 
-        # Innsynsoppføring hvis ingen PDF eller teksten inneholder "innsyn"
-        krever_innsyn = not pdf_link or "innsyn" in tittel.lower()
+        pdf_link = None
+        krever_innsyn = False
+
+        if detalj_link:
+            try:
+                detalj_html = hent_html(detalj_link)
+                detalj_soup = BeautifulSoup(detalj_html, "html.parser")
+                pdf_tag = detalj_soup.find("a", href=lambda h: h and h.lower().endswith(".pdf"))
+                if pdf_tag:
+                    pdf_link = urljoin(BASE_URL, pdf_tag["href"])
+                else:
+                    krever_innsyn = True
+            except Exception as e:
+                print(f"Feil ved henting av detaljside {detalj_link}: {e}")
+                krever_innsyn = True
 
         dokumenter.append({
             "dato": dato,
             "tittel": tittel,
-            "avsender": avsender,
-            "mottaker": mottaker,
+            "avsender": "",
+            "mottaker": "",
             "saksnr": saksnr,
             "pdf_link": pdf_link,
             "detalj_link": detalj_link,
             "krever_innsyn": krever_innsyn
         })
 
-    print(f"Fant {len(dokumenter)} dokumenter i postlisten.")
     return dokumenter
 
 def lag_mailto_innsyn(dok):
@@ -100,11 +95,18 @@ def render_html(dokumenter):
             )
             cards.append(card)
         content = "\n".join(cards)
+
     html = f"""<!doctype html>
 <html lang="no">
 <head>
   <meta charset="utf-8">
   <title>Strand kommune – uoffisiell postliste</title>
+  <style>
+    body {{ font-family: sans-serif; margin: 2rem; background: #fafafa; }}
+    .card {{ background: #fff; padding: 1rem; margin-bottom: 1rem; border: 1px solid #ddd; }}
+    .meta {{ color: #555; font-size: 0.9em; margin-bottom: 0.5rem; }}
+    .actions a {{ margin-right: 1rem; }}
+  </style>
 </head>
 <body>
   <h1>Postliste – Strand kommune (uoffisiell speiling)</h1>
@@ -118,13 +120,25 @@ def render_html(dokumenter):
         f.write(html)
     print(f"Skrev index.html til {out_path}")
 
+def hent_alle_sider(max_pages=5, page_size=100):
+    alle_dokumenter = []
+    for page in range(1, max_pages+1):
+        url = f"{POSTLISTE_BASE}?page={page}&pageSize={page_size}"
+        print(f"Henter side {page}: {url}")
+        try:
+            html = hent_html(url)
+            dokumenter = parse_postliste(html)
+            print(f"Side {page}: fant {len(dokumenter)} dokumenter")
+            alle_dokumenter.extend(dokumenter)
+            if not dokumenter:
+                break
+        except Exception as e:
+            print(f"Feil ved henting av side {page}: {e}")
+            break
+    return alle_dokumenter
+
 def main():
-    try:
-        html = hent_html(POSTLISTE_URL)
-    except Exception as e:
-        print(f"Feil ved henting: {e}")
-        return
-    dokumenter = parse_postliste(html)
+    dokumenter = hent_alle_sider(max_pages=5, page_size=100)
     render_html(dokumenter)
     json_path = os.path.join(OUTPUT_DIR, "postliste.json")
     with open(json_path, "w", encoding="utf-8") as f:
