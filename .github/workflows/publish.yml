@@ -2,7 +2,7 @@ name: Build and Publish
 
 on:
   schedule:
-    - cron: "0 6 * * *"  # Kjører hver dag kl 06:00 UTC
+    - cron: "0 6 * * *"  # kjører hver dag kl 06:00 UTC
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -34,9 +34,3 @@ jobs:
           git add index.html postliste.json assets/ pdf_dokumenter/ || true
           git commit -m "Update generated files" || true
           git push origin main
-
-      - name: Deploy to Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
