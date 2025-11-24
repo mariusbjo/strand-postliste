@@ -183,8 +183,6 @@ def render_html(dokumenter):
         )
         cards_html.append(card)
 
-# inne i render_html
-        # Duplisert oppføring for innsyn
         if dok.get("krever_innsyn"):
             dup_title = f"Innsyn: {dok.get('tittel') or 'Uten tittel'}"
             dup_actions = []
@@ -199,10 +197,4 @@ def render_html(dokumenter):
             dup_card = (
                 "<section class='card'>"
                 f"<h3>{dup_title}</h3>"
-                f"<div class='meta'>{meta_html}</div>"
-                "<div><span class='badge innsyn'>Må bes om innsyn</span></div>"
-                f"<div class='actions'>{' '.join(dup_actions)}</div>"
-                "</section>"
-            )
-            cards_html.append(dup_card)
-
+                f"<div class='meta'>{meta
