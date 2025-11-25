@@ -60,7 +60,7 @@ def main():
     alle_dokumenter = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        for page_num in range(1, 4001):  # opptil 4000 sider
+        for page_num in range(1, 201):  # opptil 200 sider
             docs = hent_side(page_num, browser)
             if not docs:
                 print(f"[Side {page_num}] Stopper – ingen flere dokumenter.")
