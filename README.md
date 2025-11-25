@@ -1,48 +1,39 @@
-# Strand kommune – uoffisiell postliste speiling
+# Strand kommune – uoffisiell postliste
 
-Dette prosjektet skraper den offentlige postlisten til Strand kommune og publiserer resultatene automatisk som en statisk nettside via GitHub Pages. Målet er å gjøre det enklere å følge med på kommunens dokumenter og samtidig synliggjøre hvilke oppføringer som krever innsynsbegjæring.
+Dette prosjektet speiler postlisten til Strand kommune ved hjelp av en automatisert scraper.  
+Målet er å gjøre dokumentoversikten enklere tilgjengelig, og å tilby en uoffisiell HTML‑ og JSON‑versjon.
 
-## ✨ Funksjonalitet
+## 🚀 Hvordan det fungerer
 
-- **Skraping av postlisten**: Henter ut dato, tittel, avsender, mottaker og saksnummer.
-- **PDF‑nedlasting**: Lagrer publiserte dokumenter som PDF der lenker er tilgjengelige.
-- **Innsynsoppføringer**: Oppføringer uten publisert dokument dupliseres med tydelig merking og en forhåndsutfylt e‑postlenke for innsynsbegjæring.
-- **Automatisk publisering**: Genererer `index.html` og `postliste.json` som publiseres direkte fra `main`‑branch til GitHub Pages.
-- **Daglig oppdatering**: GitHub Actions kjører skriptet automatisk hver dag og oppdaterer nettsiden.
+- **Playwright (Python)** brukes til å starte en headless Chromium‑nettleser.
+- Nettleseren laster inn postlisten side for side (opptil 200 sider).
+- Hver oppføring hentes ut med tittel, dato, dokumentID, mottaker og detaljlenke.
+- Resultatet lagres i:
+  - `postliste.json` – strukturert data
+  - `index.html` – enkel webside med kortvisning
 
-## 📂 Struktur
+## 📄 Funksjoner
 
-- `scraper.py` – hovedskriptet som henter og genererer innhold.
-- `templates/base.html` – HTML‑mal som brukes til å bygge nettsiden.
-- `assets/styles.css` – enkel CSS for styling.
-- `pdf_dokumenter/` – mappe der nedlastede PDF‑filer lagres.
-- `postliste.json` – strukturert datauttrekk av postlisten.
+- **Klikkbare lenker** til hver oppføring i kommunens postliste.
+- **“Be om innsyn”‑knapp** som tar deg direkte til oppføringen i kommunens innsynsløsning, slik at du kan legge dokumentet til en samlet bestilling.
+- **Progress‑logg** i GitHub Actions som viser antall dokumenter per side og total hittil.
+- **Automatisk oppdatering**: GitHub Actions kjører daglig og pusher oppdatert `index.html` og `postliste.json` til `main`.
 
-## 🚀 Oppsett
+## ⚙️ Workflow
 
-1. **Klon repoet** eller opprett det på GitHub.
-2. Sørg for at `scraper.py` ligger i rotmappen.
-3. Aktiver GitHub Pages:
-   - Gå til **Settings → Pages**.
-   - Velg **Branch: main** og **Folder: /root**.
-4. Workflow (`.github/workflows/publish.yml`) kjører automatisk og oppdaterer siden.
+Se `.github/workflows/publish.yml` for detaljer.  
+Workflowen:
+1. Sjekker ut repo
+2. Installerer Python og Playwright
+3. Kjører `scraper.py`
+4. Commiter og pusher genererte filer
 
-Nettsiden blir tilgjengelig på:  
-`https://<brukernavn>.github.io/strand-postliste/`
+## 📂 Output
 
-## ⚖️ Juridiske hensyn
+- `index.html` – en enkel webside med alle dokumentene.
+- `postliste.json` – maskinlesbar oversikt over dokumentene.
 
-- Dokumentene som publiseres er allerede offentliggjort av kommunen.
-- Oppføringer som krever innsyn markeres tydelig og lenker til en forhåndsutfylt e‑post til kommunens postmottak.
-- Husk at personopplysninger kan forekomme i dokumentene. Prosjektet bør brukes med varsomhet og tydelig merkes som en **uoffisiell speiling**.
+## ⚠️ Merknad
 
-## 🛠️ Videre arbeid
-
-- Finjustere CSS og layout.
-- Tilpasse selektorer i `parse_postliste` dersom kommunens HTML‑struktur endres.
-- Legge til støtte for flere kommuner.
-- Utvide med RSS‑feed eller API for enklere integrasjon.
-
----
-
-Dette prosjektet er laget som et uoffisielt verktøy for å øke innsyn og transparens. Det er ikke tilknyttet Strand kommune.
+Dette er en uoffisiell speiling.  
+For innsyn i dokumenter som ikke er publisert, bruk “Be om innsyn”‑knappen som tar deg til kommunens offisielle innsynsløsning.
