@@ -100,9 +100,9 @@ function renderPage(page) {{
     </div>`
   ).join("");
   document.getElementById("pagination").innerHTML =
-    `<button onclick='prevPage()' ${page===1?"disabled":""}>Forrige</button>
-     Side ${page} av ${Math.ceil(data.length/perPage)}
-     <button onclick='nextPage()' ${end>=data.length?"disabled":""}>Neste</button>`;
+    `<button onclick='prevPage()' ${{page===1?"disabled":""}}>Forrige</button>
+     Side ${{page}} av ${{Math.ceil(data.length/perPage)}}
+     <button onclick='nextPage()' ${{end>=data.length?"disabled":""}}>Neste</button>`;
 }}
 
 function prevPage() {{ if(currentPage>1) {{ currentPage--; renderPage(currentPage); }} }}
