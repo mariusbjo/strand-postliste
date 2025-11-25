@@ -71,7 +71,6 @@ def parse_postliste(html):
             "krever_innsyn": krever_innsyn
         })
 
-    print(f"Fant {len(dokumenter)} dokumenter i postlisten.")
     return dokumenter
 
 def lag_mailto_innsyn(dok):
