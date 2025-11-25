@@ -127,7 +127,7 @@ def render_html(dokumenter):
         f.write(html)
     print(f"Skrev index.html til {out_path}")
 
-def hent_alle_sider(max_pages=5, page_size=100):
+def hent_alle_sider(max_pages=4000, page_size=100):
     alle_dokumenter = []
     for page in range(1, max_pages+1):
         url = f"{POSTLISTE_BASE}?page={page}&pageSize={page_size}"
