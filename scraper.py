@@ -32,6 +32,7 @@ def hent_side(page_num: int, browser):
         dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
 
+        # Hent detaljlenke fra <a> rundt artikkelen
         link_elem = art.evaluate_handle("node => node.closest('a')")
         detalj_link = ""
         if link_elem:
@@ -53,9 +54,10 @@ def main():
     alle_dokumenter = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        for page_num in range(1, 51):  # eksempel: hent opptil 50 sider
+        for page_num in range(1, 101):  # opptil 100 sider
             docs = hent_side(page_num, browser)
             if not docs:
+                print(f"[Side {page_num}] Stopper – ingen flere dokumenter.")
                 break
             alle_dokumenter.extend(docs)
             print(f"Totalt hittil: {len(alle_dokumenter)} dokumenter.")
@@ -65,6 +67,7 @@ def main():
     json_path = os.path.join(OUTPUT_DIR, "postliste.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(alle_dokumenter, f, ensure_ascii=False, indent=2)
+    print(f"✅ Lagret JSON med {len(alle_dokumenter)} dokumenter til {json_path}")
 
     # lag HTML med paginering
     html = f"""<!doctype html>
@@ -84,7 +87,7 @@ body {{ font-family: sans-serif; margin: 2rem; }}
 <div id="pagination"></div>
 <script>
 const data = {json.dumps(alle_dokumenter, ensure_ascii=False)};
-const perPage = 50;
+let perPage = 50;
 let currentPage = 1;
 
 function renderPage(page) {{
