@@ -10,14 +10,8 @@ BASE_URL = (
 )
 
 def safe_text(element, selector: str) -> str:
-    """Return inner_text if element exists, else empty string."""
     node = element.query_selector(selector)
     return node.inner_text().strip() if node else ""
-
-def safe_attr(element, selector: str, attr: str) -> str:
-    """Return attribute value if element exists, else empty string."""
-    node = element.query_selector(selector)
-    return node.get_attribute(attr) if node else ""
 
 def hent_side(page_num: int, browser):
     url = BASE_URL.format(page=page_num)
@@ -38,7 +32,6 @@ def hent_side(page_num: int, browser):
         dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
 
-        # Hent detaljlenke fra <a> rundt artikkelen
         link_elem = art.evaluate_handle("node => node.closest('a')")
         detalj_link = ""
         if link_elem:
@@ -60,10 +53,9 @@ def main():
     alle_dokumenter = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        for page_num in range(1, 201):  # opptil 200 sider
+        for page_num in range(1, 51):  # eksempel: hent opptil 50 sider
             docs = hent_side(page_num, browser)
             if not docs:
-                print(f"[Side {page_num}] Stopper – ingen flere dokumenter.")
                 break
             alle_dokumenter.extend(docs)
             print(f"Totalt hittil: {len(alle_dokumenter)} dokumenter.")
@@ -73,26 +65,56 @@ def main():
     json_path = os.path.join(OUTPUT_DIR, "postliste.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(alle_dokumenter, f, ensure_ascii=False, indent=2)
-    print(f"✅ Lagret JSON med {len(alle_dokumenter)} dokumenter til {json_path}")
 
-    # lag HTML med klikkbare lenker
-    html_cards = "".join(
-        f"<section><h3>{d['tittel']}</h3>"
-        f"<p>{d['dato']} – {d['dokumentID']} – {d['mottaker']} (side {d['side']})</p>"
-        f"<p><a href='{d['detalj_link']}' target='_blank'>Detaljer</a></p></section>"
-        for d in alle_dokumenter
-    )
+    # lag HTML med paginering
     html = f"""<!doctype html>
 <html lang="no">
-<head><meta charset="utf-8"><title>Postliste</title></head>
+<head>
+<meta charset="utf-8">
+<title>Postliste</title>
+<style>
+body {{ font-family: sans-serif; margin: 2rem; }}
+.card {{ border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; }}
+</style>
+</head>
 <body>
 <h1>Postliste – Strand kommune</h1>
 <p>Oppdatert: {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
-{html_cards}
-</body></html>"""
+<div id="container"></div>
+<div id="pagination"></div>
+<script>
+const data = {json.dumps(alle_dokumenter, ensure_ascii=False)};
+const perPage = 50;
+let currentPage = 1;
+
+function renderPage(page) {{
+  const start = (page-1)*perPage;
+  const end = start+perPage;
+  const items = data.slice(start,end);
+  document.getElementById("container").innerHTML = items.map(d =>
+    `<div class='card'>
+      <h3>${{d.tittel}}</h3>
+      <p>${{d.dato}} – ${{d.dokumentID}} – ${{d.mottaker}} (side ${{d.side}})</p>
+      <p><a href='${{d.detalj_link}}' target='_blank'>Detaljer</a> | 
+         <a href='${{d.detalj_link}}' target='_blank'>Be om innsyn</a></p>
+    </div>`
+  ).join("");
+  document.getElementById("pagination").innerHTML =
+    `<button onclick='prevPage()' ${page===1?"disabled":""}>Forrige</button>
+     Side ${page} av ${Math.ceil(data.length/perPage)}
+     <button onclick='nextPage()' ${end>=data.length?"disabled":""}>Neste</button>`;
+}}
+
+function prevPage() {{ if(currentPage>1) {{ currentPage--; renderPage(currentPage); }} }}
+function nextPage() {{ if(currentPage<Math.ceil(data.length/perPage)) {{ currentPage++; renderPage(currentPage); }} }}
+
+renderPage(currentPage);
+</script>
+</body>
+</html>"""
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"✅ Lagret HTML til index.html")
+    print(f"✅ Lagret HTML med paginering til index.html")
 
 if __name__ == "__main__":
     main()
