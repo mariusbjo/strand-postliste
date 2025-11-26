@@ -32,11 +32,29 @@ def hent_side(page_num: int, browser):
         dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
 
-        # Hent detaljlenke fra <a> rundt artikkelen
+        # Hent detaljlenke
         link_elem = art.evaluate_handle("node => node.closest('a')")
-        detalj_link = ""
-        if link_elem:
-            detalj_link = link_elem.get_attribute("href") or ""
+        detalj_link = link_elem.get_attribute("href") if link_elem else ""
+
+        filer = []
+        if detalj_link:
+            # Gå inn på detaljsiden
+            detail_page = browser.new_page()
+            detail_page.goto(detalj_link, timeout=60000)
+            try:
+                detail_page.wait_for_selector("a.bc-content-link", timeout=10000)
+                file_links = detail_page.query_selector_all("a.bc-content-link")
+                for fl in file_links:
+                    href = fl.get_attribute("href")
+                    tekst = fl.inner_text()
+                    if href and href.startswith("/api/presentation/v2/nye-innsyn/filer"):
+                        filer.append({
+                            "tekst": tekst,
+                            "url": "https://www.strand.kommune.no" + href
+                        })
+            except:
+                pass
+            detail_page.close()
 
         dokumenter.append({
             "tittel": tittel,
@@ -44,7 +62,8 @@ def hent_side(page_num: int, browser):
             "dokumentID": dokid,
             "mottaker": mottaker,
             "side": page_num,
-            "detalj_link": detalj_link
+            "detalj_link": detalj_link,
+            "filer": filer
         })
     page.close()
     print(f"[Side {page_num}] Fant {len(dokumenter)} dokumenter.")
@@ -54,7 +73,7 @@ def main():
     alle_dokumenter = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        for page_num in range(1, 101):  # opptil 100 sider
+        for page_num in range(1, 51):  # eksempel: opptil 50 sider, kan økes til 4000
             docs = hent_side(page_num, browser)
             if not docs:
                 print(f"[Side {page_num}] Stopper – ingen flere dokumenter.")
@@ -69,7 +88,7 @@ def main():
         json.dump(alle_dokumenter, f, ensure_ascii=False, indent=2)
     print(f"✅ Lagret JSON med {len(alle_dokumenter)} dokumenter til {json_path}")
 
-    # lag HTML med paginering
+    # lag HTML med paginering og fil-lenker
     html = f"""<!doctype html>
 <html lang="no">
 <head>
@@ -100,6 +119,7 @@ function renderPage(page) {{
       <p>${{d.dato}} – ${{d.dokumentID}} – ${{d.mottaker}} (side ${{d.side}})</p>
       <p><a href='${{d.detalj_link}}' target='_blank'>Detaljer</a> | 
          <a href='${{d.detalj_link}}' target='_blank'>Be om innsyn</a></p>
+      ${{d.filer.length ? "<ul>" + d.filer.map(f => `<li><a href='${{f.url}}' target='_blank'>${{f.tekst}}</a></li>`).join("") + "</ul>" : ""}}
     </div>`
   ).join("");
   document.getElementById("pagination").innerHTML =
@@ -117,7 +137,7 @@ renderPage(currentPage);
 </html>"""
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"✅ Lagret HTML med paginering til index.html")
+    print(f"✅ Lagret HTML med paginering og fil-lenker til index.html")
 
 if __name__ == "__main__":
     main()
