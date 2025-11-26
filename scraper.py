@@ -3,11 +3,18 @@ import json
 import os
 from datetime import datetime
 
+CONFIG_FILE = "config.json"
 OUTPUT_DIR = "."
 BASE_URL = (
     "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/"
     "postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/?page={page}&pageSize=100"
 )
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"max_pages": 20, "per_page": 50}
 
 def safe_text(element, selector: str) -> str:
     node = element.query_selector(selector)
@@ -16,9 +23,9 @@ def safe_text(element, selector: str) -> str:
 def hent_side(page_num: int, browser):
     url = BASE_URL.format(page=page_num)
     page = browser.new_page()
-    page.goto(url, timeout=60000)
+    page.goto(url, timeout=30000)
     try:
-        page.wait_for_selector("article.bc-content-teaser--item", timeout=15000)
+        page.wait_for_selector("article.bc-content-teaser--item", timeout=10000)
     except:
         print(f"[Side {page_num}] Ingen oppføringer funnet.")
         page.close()
@@ -38,11 +45,10 @@ def hent_side(page_num: int, browser):
 
         filer = []
         if detalj_link:
-            # Gå inn på detaljsiden
             detail_page = browser.new_page()
-            detail_page.goto(detalj_link, timeout=60000)
             try:
-                detail_page.wait_for_selector("a.bc-content-link", timeout=10000)
+                detail_page.goto(detalj_link, timeout=30000)
+                detail_page.wait_for_selector("a.bc-content-link", timeout=5000)
                 file_links = detail_page.query_selector_all("a.bc-content-link")
                 for fl in file_links:
                     href = fl.get_attribute("href")
@@ -52,9 +58,10 @@ def hent_side(page_num: int, browser):
                             "tekst": tekst,
                             "url": "https://www.strand.kommune.no" + href
                         })
-            except:
-                pass
-            detail_page.close()
+            except Exception as e:
+                print(f"[Side {page_num}] Klarte ikke hente filer for {tittel}: {e}")
+            finally:
+                detail_page.close()
 
         dokumenter.append({
             "tittel": tittel,
@@ -70,10 +77,14 @@ def hent_side(page_num: int, browser):
     return dokumenter
 
 def main():
+    config = load_config()
+    max_pages = config.get("max_pages", 20)
+    per_page = config.get("per_page", 50)
+
     alle_dokumenter = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        for page_num in range(1, 51):  # eksempel: opptil 50 sider, kan økes til 4000
+        for page_num in range(1, max_pages + 1):
             docs = hent_side(page_num, browser)
             if not docs:
                 print(f"[Side {page_num}] Stopper – ingen flere dokumenter.")
@@ -83,10 +94,9 @@ def main():
         browser.close()
 
     # lagre JSON
-    json_path = os.path.join(OUTPUT_DIR, "postliste.json")
-    with open(json_path, "w", encoding="utf-8") as f:
+    with open("postliste.json", "w", encoding="utf-8") as f:
         json.dump(alle_dokumenter, f, ensure_ascii=False, indent=2)
-    print(f"✅ Lagret JSON med {len(alle_dokumenter)} dokumenter til {json_path}")
+    print(f"✅ Lagret JSON med {len(alle_dokumenter)} dokumenter")
 
     # lag HTML med paginering og fil-lenker
     html = f"""<!doctype html>
@@ -106,7 +116,7 @@ body {{ font-family: sans-serif; margin: 2rem; }}
 <div id="pagination"></div>
 <script>
 const data = {json.dumps(alle_dokumenter, ensure_ascii=False)};
-let perPage = 50;
+let perPage = {per_page};
 let currentPage = 1;
 
 function renderPage(page) {{
@@ -137,7 +147,7 @@ renderPage(currentPage);
 </html>"""
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"✅ Lagret HTML med paginering og fil-lenker til index.html")
+    print(f"✅ Lagret HTML med paginering og fil-lenker")
 
 if __name__ == "__main__":
     main()
