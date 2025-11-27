@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright
 import json
 import os
 from datetime import datetime
+import pytz
 
 CONFIG_FILE = "config.json"
 DATA_FILE = "postliste.json"
@@ -40,6 +41,16 @@ def safe_text(element, selector: str) -> str:
     except Exception:
         return ""
 
+# Ny hjelpefunksjon for å formatere datoer til DD.MM.YYYY
+def format_dato(dato_str: str) -> str:
+    from datetime import datetime
+    try:
+        # antar at dato kommer som YYYY-MM-DD
+        dt = datetime.strptime(dato_str, "%Y-%m-%d")
+        return dt.strftime("%d.%m.%Y")
+    except Exception:
+        return dato_str  # fallback hvis parsing feiler
+
 def hent_side(page_num: int, browser):
     url = BASE_URL.format(page=page_num)
     print(f"[INFO] Åpner side {page_num}: {url}")
@@ -56,22 +67,20 @@ def hent_side(page_num: int, browser):
     dokumenter = []
     for art in articles:
         tittel = safe_text(art, ".bc-content-teaser-title-text")
-        dato = safe_text(art, ".bc-content-teaser-meta-property--dato dd")
+        dato_raw = safe_text(art, ".bc-content-teaser-meta-property--dato dd")
+        dato = format_dato(dato_raw)   # <-- konverterer til DD.MM.YYYY
         dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
         doktype = safe_text(art, ".bc-content-teaser-meta-property--dokumenttype dd")
 
-        # DokumentID må finnes; hvis ikke, hopp
         if not dokid:
             continue
 
-        # Avsender/mottaker basert på dokumenttype
         mottaker = ""
         if "Inngående" in doktype:
             mottaker = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
         elif "Utgående" in doktype:
             mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
 
-        # Hent detaljlenke (nærmeste <a> rundt artikkelen)
         detalj_link = ""
         try:
             link_elem = art.evaluate_handle("node => node.closest('a')")
@@ -79,7 +88,6 @@ def hent_side(page_num: int, browser):
         except Exception:
             detalj_link = ""
 
-        # Hent publiserte filer fra detaljsiden (bred filter på href)
         filer = []
         if detalj_link:
             detail_page = browser.new_page()
@@ -90,7 +98,6 @@ def hent_side(page_num: int, browser):
                     href = fl.get_attribute("href")
                     tekst = fl.inner_text()
                     if href and "/api/presentation/v2/nye-innsyn/filer" in href:
-                        # Absolutt URL
                         abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
                         filer.append({"tekst": tekst, "url": abs_url})
             except Exception as e:
@@ -100,7 +107,7 @@ def hent_side(page_num: int, browser):
 
         dokumenter.append({
             "tittel": tittel,
-            "dato": dato,
+            "dato": dato,  # <-- lagres i norsk format
             "dokumentID": dokid,
             "dokumenttype": doktype,
             "avsender_mottaker": mottaker,
@@ -194,7 +201,7 @@ ul.files li {{ margin: .25rem 0; }}
 </head>
 <body>
 <h1>Postliste – Strand kommune</h1>
-<p>Oppdatert: {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
+<p>Oppdatert: {datetime.now(pytz.timezone("Europe/Oslo")).strftime("%d.%m.%Y %H:%M")}</p>
 <div id="container"></div>
 <div id="pagination" class="pagination"></div>
 <script>
