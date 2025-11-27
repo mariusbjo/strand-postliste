@@ -245,15 +245,15 @@ function renderPage(page) {{
       ? "<ul class='files'>" + d.filer.map(f => `<li><a href='${{f.url}}' target='_blank'>${{escapeHtml(f.tekst) || "Fil"}}</a></li>`).join("") + "</ul>"
       : `<p><a href='${{d.detalj_link}}' target='_blank'>Be om innsyn</a></p>`;
 
-    const amHtml = d.avsender_mottaker ? `<p class='meta'>Avsender/Mottaker: ${{escapeHtml(d.avsender_mottaker)}}</p>` : "";
+    const amInline = d.avsender_mottaker ? escapeHtml(d.avsender_mottaker) + " – " : "";
 
     return `
       <div class='card'>
         <h3>${{escapeHtml(d.tittel)}}</h3>
-        <p class='meta'>${{escapeHtml(d.dato)}} – ${{escapeHtml(d.dokumentID)}} –
+        <p class='meta'>
+          ${{escapeHtml(d.dato)}} – ${{escapeHtml(d.dokumentID)}} – ${{amInline}}
           <span class='${{typeClass}}'>${{typeIcon}} ${{escapeHtml(d.dokumenttype)}}</span>
         </p>
-        ${{amHtml}}
         <p>Status: <span class='${{statusClass}}'>${{d.status}}</span></p>
         <p><a href='${{d.detalj_link}}' target='_blank'>Detaljer</a></p>
         ${{filesHtml}}
