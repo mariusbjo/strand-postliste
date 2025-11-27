@@ -1,0 +1,38 @@
+name: Oppdaterings-scraper (update)
+
+on:
+  schedule:
+    - cron: "0 14 * * *"   # kjører hver dag kl 14:00
+  workflow_dispatch:       # kan trigges manuelt
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sjekk ut repo
+        uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installer Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
+
+      - name: Sett modus til update
+        run: |
+          jq '.mode="update"' config.json > tmp.json && mv tmp.json config.json
+
+      - name: Kjør scraper
+        run: python scraper.py
+
+      - name: Commit og push resultater
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add postliste.json index.html
+          git commit -m "Oppdatert postliste (update)"
+          git push
