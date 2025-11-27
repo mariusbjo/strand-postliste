@@ -43,12 +43,12 @@ def safe_text(element, selector: str) -> str:
 
 # Ny hjelpefunksjon for å formatere datoer til DD.MM.YYYY
 def format_dato(dato_str: str) -> str:
+    from datetime import datetime
     try:
-        # antar at dato kommer som YYYY-MM-DD
         dt = datetime.strptime(dato_str, "%Y-%m-%d")
         return dt.strftime("%d.%m.%Y")
     except Exception:
-        return dato_str  # fallback hvis parsing feiler
+        return dato_str
 
 def hent_side(page_num: int, browser):
     url = BASE_URL.format(page=page_num)
@@ -67,18 +67,19 @@ def hent_side(page_num: int, browser):
     for art in articles:
         tittel = safe_text(art, ".bc-content-teaser-title-text")
         dato_raw = safe_text(art, ".bc-content-teaser-meta-property--dato dd")
-        dato = format_dato(dato_raw)   # <-- konverterer til DD.MM.YYYY
+        dato = format_dato(dato_raw)
         dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
-        doktype = safe_text(art, ".bc-content-teaser-meta-property--dokumenttype dd")
+
+        # Ny selector for dokumenttype/sakstype
+        doktype = safe_text(art, ".SakListItem_sakListItemTypeText__16759c")
+
+        # Avsender/mottaker
+        avsender = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
+        mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
+        am = avsender if avsender else (mottaker if mottaker else "")
 
         if not dokid:
             continue
-
-        mottaker = ""
-        if "Inngående" in doktype:
-            mottaker = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
-        elif "Utgående" in doktype:
-            mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
 
         detalj_link = ""
         try:
@@ -106,10 +107,10 @@ def hent_side(page_num: int, browser):
 
         dokumenter.append({
             "tittel": tittel,
-            "dato": dato,  # <-- lagres i norsk format
+            "dato": dato,
             "dokumentID": dokid,
             "dokumenttype": doktype,
-            "avsender_mottaker": mottaker,
+            "avsender_mottaker": am,
             "side": page_num,
             "detalj_link": detalj_link,
             "filer": filer,
@@ -172,7 +173,7 @@ def main():
         json.dump(data_list, f, ensure_ascii=False, indent=2)
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
-    # Generer HTML med ikoner og fargekoder
+    # Generer HTML med ikoner, fargekoder, filtrering og norsk tid/datoformat
     html = f"""<!doctype html>
 <html lang="no">
 <head>
@@ -180,6 +181,8 @@ def main():
 <title>Postliste</title>
 <style>
 body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }}
+.controls {{ margin-bottom: 1rem; }}
+.controls label {{ margin-right: .5rem; }}
 .card {{ border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }}
 .card h3 {{ margin: 0 0 .5rem 0; font-size: 1.1rem; }}
 .meta {{ color: #555; margin-bottom: .5rem; }}
@@ -192,21 +195,47 @@ body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; mar
 .type-møteprotokoll {{ color: #8b5e34; font-weight: 600; }}
 .type-saksfremlegg {{ color: #14532d; font-weight: 600; }}
 .type-internt {{ color: #667085; font-weight: 600; }}
-.controls button {{ margin-right: .5rem; }}
-ul.files {{ margin: .5rem 0 0 0; }}
+ul.files {{ margin: .5rem 0 0 0; padding-left: 1rem; }}
 ul.files li {{ margin: .25rem 0; }}
-.pagination {{ margin-top: 1rem; }}
+.pagination {{ margin: 1rem 0; }}
 </style>
 </head>
 <body>
 <h1>Postliste – Strand kommune</h1>
 <p>Oppdatert: {datetime.now(ZoneInfo("Europe/Oslo")).strftime("%d.%m.%Y %H:%M")}</p>
+
+<div class="controls">
+  <label for="filterType">Filtrer på dokumenttype:</label>
+  <select id="filterType" onchange="applyFilter()">
+    <option value="">Alle</option>
+    <option value="Inngående">Inngående</option>
+    <option value="Utgående">Utgående</option>
+    <option value="Sakskart">Sakskart</option>
+    <option value="Møtebok">Møtebok</option>
+    <option value="Møteprotokoll">Møteprotokoll</option>
+    <option value="Saksfremlegg">Saksfremlegg</option>
+    <option value="Internt">Internt</option>
+  </select>
+
+  <label for="perPage">Oppføringer per side:</label>
+  <select id="perPage" onchange="changePerPage()">
+    <option value="5">5</option>
+    <option value="10">10</option>
+    <option value="20" selected>20</option>
+    <option value="50">50</option>
+    <option value="100">100</option>
+  </select>
+</div>
+
+<div id="pagination-top" class="pagination"></div>
 <div id="container"></div>
-<div id="pagination" class="pagination"></div>
+<div id="pagination-bottom" class="pagination"></div>
+
 <script>
 const data = {json.dumps(data_list, ensure_ascii=False)};
 let perPage = {per_page};
 let currentPage = 1;
+let currentFilter = "";
 
 function cssClassForType(doktype) {{
   if (!doktype) return "";
@@ -237,45 +266,56 @@ function escapeHtml(s) {{
   return s.replace(/[&<>"]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}})[c]);
 }}
 
+function getFilteredData() {{
+  if (!currentFilter) return data;
+  return data.filter(d => d.dokumenttype && d.dokumenttype.includes(currentFilter));
+}}
+
 function renderPage(page) {{
+  const filtered = getFilteredData();
   const start = (page-1)*perPage;
   const end = start+perPage;
-  const items = data.slice(start,end);
+  const items = filtered.slice(start,end);
 
   const html = items.map(d => {{
-    const typeClass = cssClassForType(d.dokumenttype);
-    const typeIcon = iconForType(d.dokumenttype);
+    const typeClass = cssClassForType(d.dokumenttype || "");
+    const typeIcon = iconForType(d.dokumenttype || "");
     const statusClass = d.status === "Publisert" ? "status-publisert" : "status-innsyn";
-
     const filesHtml = (d.filer && d.filer.length)
       ? "<ul class='files'>" + d.filer.map(f => `<li><a href='${{f.url}}' target='_blank'>${{escapeHtml(f.tekst) || "Fil"}}</a></li>`).join("") + "</ul>"
-      : `<p><a href='${{d.detalj_link}}' target='_blank'>Be om innsyn</a></p>`;
-
-    const amInline = d.avsender_mottaker ? escapeHtml(d.avsender_mottaker) + " – " : "";
+      : (d.detalj_link ? `<p><a href='${{d.detalj_link}}' target='_blank'>Be om innsyn</a></p>` : "");
+    const am = d.avsender_mottaker ? escapeHtml(d.avsender_mottaker) + " – " : "";
 
     return `
       <div class='card'>
         <h3>${{escapeHtml(d.tittel)}}</h3>
         <p class='meta'>
-          ${{escapeHtml(d.dato)}} – ${{escapeHtml(d.dokumentID)}} – ${{amInline}}
-          <span class='${{typeClass}}'>${{typeIcon}} ${{escapeHtml(d.dokumenttype)}}</span>
+          ${{escapeHtml(d.dato)}} – ${{escapeHtml(d.dokumentID)}} – ${{am}}
+          <span class='${{typeClass}}'>${{typeIcon}} ${{escapeHtml(d.dokumenttype || "")}}</span>
         </p>
         <p>Status: <span class='${{statusClass}}'>${{d.status}}</span></p>
-        <p><a href='${{d.detalj_link}}' target='_blank'>Detaljer</a></p>
+        ${{d.detalj_link ? `<p><a href='${{d.detalj_link}}' target='_blank'>Detaljer</a></p>` : ""}}
         ${{filesHtml}}
       </div>`;
   }}).join("");
 
   document.getElementById("container").innerHTML = html;
+  renderPagination("pagination-top", page, filtered.length);
+  renderPagination("pagination-bottom", page, filtered.length);
+}}
 
-  document.getElementById("pagination").innerHTML =
+function renderPagination(elementId, page, totalItems) {{
+  const maxPage = Math.ceil(totalItems / perPage);
+  document.getElementById(elementId).innerHTML =
     `<button onclick='prevPage()' ${{page===1?"disabled":""}}>Forrige</button>
-     Side ${{page}} av ${{Math.ceil(data.length/perPage)}}
-     <button onclick='nextPage()' ${{end>=data.length?"disabled":""}}>Neste</button>`;
+     Side ${{page}} av ${{maxPage}}
+     <button onclick='nextPage()' ${{page>=maxPage?"disabled":""}}>Neste</button>`;
 }}
 
 function prevPage() {{ if (currentPage > 1) {{ currentPage--; renderPage(currentPage); }} }}
-function nextPage() {{ if (currentPage < Math.ceil(data.length/perPage)) {{ currentPage++; renderPage(currentPage); }} }}
+function nextPage() {{ const maxPage = Math.ceil(getFilteredData().length/perPage); if (currentPage < maxPage) {{ currentPage++; renderPage(currentPage); }} }}
+function applyFilter() {{ currentFilter = document.getElementById("filterType").value; currentPage = 1; renderPage(currentPage); }}
+function changePerPage() {{ perPage = parseInt(document.getElementById("perPage").value); currentPage = 1; renderPage(currentPage); }}
 
 renderPage(currentPage);
 </script>
