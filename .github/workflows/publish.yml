@@ -1,8 +1,6 @@
 name: Build and Publish
 
 on:
-  schedule:
-    - cron: "0 6 * * *"   # daglig kl 06:00 UTC
   workflow_dispatch:
   push:
     branches: [ main ]
@@ -16,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # henter hele historikken, nødvendig for rebase
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -31,12 +31,13 @@ jobs:
       - name: Run scraper
         run: python scraper.py
 
-      - name: Commit generated files
+      - name: Commit and Push generated files
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
-          git rebase origin/main || echo "No rebase needed"
+          # rebase mot siste main, hvis det feiler fall tilbake til merge
+          git rebase origin/main || git merge origin/main
           git add -A
           git commit -m "Update generated files" || echo "No changes to commit"
-          git push origin HEAD:main
+          git push origin main
