@@ -274,7 +274,7 @@ function nextPage() {{ if (currentPage < Math.ceil(data.length/perPage)) {{ curr
 renderPage(currentPage);
 </script>
 </body>
-</html>`;
+</html>"""
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
     print("[INFO] Lagret HTML til index.html")
