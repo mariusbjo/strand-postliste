@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 
 CONFIG_FILE = "config.json"
+DATA_FILE = "postliste.json"
+
 BASE_URL = (
     "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/"
     "postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/?page={page}&pageSize=100"
@@ -13,7 +15,18 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {"max_pages": 2, "per_page": 50}
+    return {
+        "mode": "incremental",
+        "max_pages_incremental": 5,
+        "max_pages_update": 200,
+        "per_page": 50
+    }
+
+def load_existing():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return {d["dokumentID"]: d for d in json.load(f)}
+    return {}
 
 def safe_text(element, selector: str) -> str:
     node = element.query_selector(selector)
@@ -39,14 +52,12 @@ def hent_side(page_num: int, browser):
         dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
         doktype = safe_text(art, ".bc-content-teaser-meta-property--dokumenttype dd")
 
-        # Avsender/mottaker logikk
         mottaker = ""
         if "Inngående" in doktype:
             mottaker = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
         elif "Utgående" in doktype:
             mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
 
-        # Hent detaljlenke
         link_elem = art.evaluate_handle("node => node.closest('a')")
         detalj_link = link_elem.get_attribute("href") if link_elem else ""
 
@@ -81,33 +92,47 @@ def hent_side(page_num: int, browser):
             "status": "Publisert" if filer else "Må bes om innsyn"
         })
     page.close()
-    print(f"[INFO] Side {page_num}: {len(dokumenter)} dokumenter funnet.")
     return dokumenter
 
 def main():
     print("[INFO] Starter scraper…")
     config = load_config()
-    max_pages = config.get("max_pages", 2)
+    mode = config.get("mode", "incremental")
+    max_pages = config["max_pages_incremental"] if mode == "incremental" else config["max_pages_update"]
     per_page = config.get("per_page", 50)
 
-    alle_dokumenter = []
+    existing = load_existing()
+    updated = dict(existing)
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         for page_num in range(1, max_pages + 1):
             docs = hent_side(page_num, browser)
             if not docs:
-                print(f"[INFO] Stopper på side {page_num} – ingen flere dokumenter.")
                 break
-            alle_dokumenter.extend(docs)
-            print(f"[INFO] Totalt hittil: {len(alle_dokumenter)} dokumenter.")
+            for d in docs:
+                if d["dokumentID"] not in updated:
+                    print(f"[NEW] Ny oppføring: {d['dokumentID']} – {d['tittel']}")
+                    updated[d["dokumentID"]] = d
+                else:
+                    # Oppdater hvis status eller filer har endret seg
+                    old = updated[d["dokumentID"]]
+                    if old["status"] != d["status"] or len(old.get("filer", [])) != len(d.get("filer", [])):
+                        print(f"[UPDATE] Oppdatert oppføring: {d['dokumentID']} – {d['tittel']}")
+                        updated[d["dokumentID"]] = d
+            if mode == "incremental":
+                # Stopp når vi ser en kjent ID
+                if any(d["dokumentID"] in existing for d in docs):
+                    print("[INFO] Stoppet – resten er gamle oppføringer.")
+                    break
         browser.close()
 
     # lagre JSON
-    with open("postliste.json", "w", encoding="utf-8") as f:
-        json.dump(alle_dokumenter, f, ensure_ascii=False, indent=2)
-    print(f"[INFO] Lagret JSON med {len(alle_dokumenter)} dokumenter")
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(list(updated.values()), f, ensure_ascii=False, indent=2)
+    print(f"[INFO] Lagret JSON med {len(updated)} dokumenter")
 
-    # lag HTML med paginering, status og ikoner
+    # lag HTML (samme som før, men med perPage fra config)
     html = f"""<!doctype html>
 <html lang="no">
 <head>
@@ -118,13 +143,6 @@ body {{ font-family: sans-serif; margin: 2rem; }}
 .card {{ border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; }}
 .status-publisert {{ color: green; font-weight: bold; }}
 .status-innsyn {{ color: red; font-weight: bold; }}
-.type-inngående {{ color: blue; font-weight: bold; }}
-.type-utgående {{ color: darkorange; font-weight: bold; }}
-.type-sakskart {{ color: purple; font-weight: bold; }}
-.type-møtebok {{ color: teal; font-weight: bold; }}
-.type-møteprotokoll {{ color: brown; font-weight: bold; }}
-.type-saksfremlegg {{ color: darkgreen; font-weight: bold; }}
-.type-internt {{ color: gray; font-weight: bold; }}
 </style>
 </head>
 <body>
@@ -133,31 +151,9 @@ body {{ font-family: sans-serif; margin: 2rem; }}
 <div id="container"></div>
 <div id="pagination"></div>
 <script>
-const data = {json.dumps(alle_dokumenter, ensure_ascii=False)};
+const data = {json.dumps(list(updated.values()), ensure_ascii=False)};
 let perPage = {per_page};
 let currentPage = 1;
-
-function cssClassForType(doktype) {{
-  if (doktype.includes("Inngående")) return "type-inngående";
-  if (doktype.includes("Utgående")) return "type-utgående";
-  if (doktype.includes("Sakskart")) return "type-sakskart";
-  if (doktype.includes("Møtebok")) return "type-møtebok";
-  if (doktype.includes("Møteprotokoll")) return "type-møteprotokoll";
-  if (doktype.includes("Saksfremlegg")) return "type-saksfremlegg";
-  if (doktype.includes("Internt")) return "type-internt";
-  return "";
-}}
-
-function iconForType(doktype) {{
-  if (doktype.includes("Inngående")) return "📬";
-  if (doktype.includes("Utgående")) return "📤";
-  if (doktype.includes("Sakskart")) return "📑";
-  if (doktype.includes("Møtebok")) return "📘";
-  if (doktype.includes("Møteprotokoll")) return "📜";
-  if (doktype.includes("Saksfremlegg")) return "📝";
-  if (doktype.includes("Internt")) return "📂";
-  return "📄";
-}}
 
 function renderPage(page) {{
   const start = (page-1)*perPage;
@@ -166,9 +162,13 @@ function renderPage(page) {{
   document.getElementById("container").innerHTML = items.map(d =>
     `<div class='card'>
       <h3>${{d.tittel}}</h3>
-      <p>${{d.dato}} – ${{d.dokumentID}} – <span class='${{cssClassForType(d.dokumenttype)}}'>${{iconForType(d.dokumenttype)}} ${{d.dokumenttype}}</span></p>
+      <p>${{d.dato}} – ${{d.dokumentID}} – ${{d.dokumenttype}}</p>
       ${{d.avsender_mottaker ? `<p>Avsender/Mottaker: ${{d.avsender_mottaker}}</p>` : ""}}
       <p>Status: <span class='${{d.status==="Publisert"?"status-publisert":"status-innsyn"}}'>${{d.status}}</span></p>
       <p><a href='${{d.detalj_link}}' target='_blank'>Detaljer</a></p>
       ${{d.filer.length ? "<ul>" + d.filer.map(f => `<li><a href='${{f.url}}' target='_blank'>${{f.tekst}}</a></li>`).join("") + "</ul>" : "<p><a href='${{d.detalj_link}}' target='_blank'>Be om innsyn</a></p>"}}
     </div>`
+  ).join("");
+  document.getElementById("pagination").innerHTML =
+    `<button onclick='prevPage()' ${{page===1?"disabled":""}}>Forrige</button>
+     Side ${{page}} av ${{Math.ceil(data.length
