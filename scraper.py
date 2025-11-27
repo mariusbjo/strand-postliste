@@ -406,7 +406,7 @@ function renderSummary(totalFiltered) {{
   const parts = [];
   if (currentSearch) parts.push(`søk: "${{currentSearch}}"`);
   if (currentFilter) parts.push(`filter: ${{currentFilter}}`);
-  const ctx = parts.length ? ` (${parts.join(", ")})` : "";
+  const ctx = parts.length ? ` (${{parts.join(", ")}})` : "";
   document.getElementById("summary").textContent =
     `Viser ${{totalFiltered}} av ${{totalAll}}${{ctx}}`;
 }}
