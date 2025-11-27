@@ -69,14 +69,17 @@ def hent_side(page_num: int, browser):
         dato_raw = safe_text(art, ".bc-content-teaser-meta-property--dato dd")
         dato = format_dato(dato_raw)
         dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
-
-        # Ny selector for dokumenttype/sakstype
         doktype = safe_text(art, ".SakListItem_sakListItemTypeText__16759c")
 
-        # Avsender/mottaker
+        # Avsender/mottaker med label
         avsender = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
-        am = avsender if avsender else (mottaker if mottaker else "")
+        if avsender:
+            am = f"Avsender: {avsender}"
+        elif mottaker:
+            am = f"Mottaker: {mottaker}"
+        else:
+            am = ""
 
         if not dokid:
             continue
@@ -173,7 +176,7 @@ def main():
         json.dump(data_list, f, ensure_ascii=False, indent=2)
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
-    # Generer HTML med ikoner, fargekoder, filtrering og norsk tid/datoformat
+    # Generer komplett HTML med ikoner, fargekoder, filtrering, paginering (topp/bunn) og norsk tid/datoformat
     html = f"""<!doctype html>
 <html lang="no">
 <head>
@@ -181,8 +184,9 @@ def main():
 <title>Postliste</title>
 <style>
 body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }}
-.controls {{ margin-bottom: 1rem; }}
-.controls label {{ margin-right: .5rem; }}
+.controls {{ display: flex; gap: 1rem; align-items: center; margin: 1rem 0; flex-wrap: wrap; }}
+.controls label {{ font-weight: 600; color: #333; }}
+select {{ padding: .25rem .5rem; }}
 .card {{ border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }}
 .card h3 {{ margin: 0 0 .5rem 0; font-size: 1.1rem; }}
 .meta {{ color: #555; margin-bottom: .5rem; }}
@@ -197,7 +201,9 @@ body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; mar
 .type-internt {{ color: #667085; font-weight: 600; }}
 ul.files {{ margin: .5rem 0 0 0; padding-left: 1rem; }}
 ul.files li {{ margin: .25rem 0; }}
-.pagination {{ margin: 1rem 0; }}
+.pagination {{ margin: 1rem 0; display: flex; gap: .75rem; align-items: center; }}
+.pagination button {{ padding: .25rem .6rem; }}
+.summary {{ color: #444; font-size: .95rem; }}
 </style>
 </head>
 <body>
@@ -205,26 +211,29 @@ ul.files li {{ margin: .25rem 0; }}
 <p>Oppdatert: {datetime.now(ZoneInfo("Europe/Oslo")).strftime("%d.%m.%Y %H:%M")}</p>
 
 <div class="controls">
-  <label for="filterType">Filtrer på dokumenttype:</label>
-  <select id="filterType" onchange="applyFilter()">
-    <option value="">Alle</option>
-    <option value="Inngående">Inngående</option>
-    <option value="Utgående">Utgående</option>
-    <option value="Sakskart">Sakskart</option>
-    <option value="Møtebok">Møtebok</option>
-    <option value="Møteprotokoll">Møteprotokoll</option>
-    <option value="Saksfremlegg">Saksfremlegg</option>
-    <option value="Internt">Internt</option>
-  </select>
-
-  <label for="perPage">Oppføringer per side:</label>
-  <select id="perPage" onchange="changePerPage()">
-    <option value="5">5</option>
-    <option value="10">10</option>
-    <option value="20" selected>20</option>
-    <option value="50">50</option>
-    <option value="100">100</option>
-  </select>
+  <div>
+    <label for="filterType">Filtrer på dokumenttype:</label>
+    <select id="filterType" onchange="applyFilter()">
+      <option value="">Alle</option>
+      <option value="Inngående">Inngående</option>
+      <option value="Utgående">Utgående</option>
+      <option value="Sakskart">Sakskart</option>
+      <option value="Møtebok">Møtebok</option>
+      <option value="Møteprotokoll">Møteprotokoll</option>
+      <option value="Saksfremlegg">Saksfremlegg</option>
+      <option value="Internt">Internt</option>
+    </select>
+  </div>
+  <div>
+    <label for="perPage">Oppføringer per side:</label>
+    <select id="perPage" onchange="changePerPage()">
+      <option value="5">5</option>
+      <option value="10" selected>10</option>
+      <option value="20">20</option>
+      <option value="50">50</option>
+    </select>
+  </div>
+  <div class="summary" id="summary"></div>
 </div>
 
 <div id="pagination-top" class="pagination"></div>
@@ -263,7 +272,7 @@ function iconForType(doktype) {{
 
 function escapeHtml(s) {{
   if (!s) return "";
-  return s.replace(/[&<>"]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}})[c]);
+  return s.replace(/[&<>"]/g, c => ({{"&":"&amp;","<":"&lt;","">":"&gt;","\\"":"&quot;"}})[c]);
 }}
 
 function getFilteredData() {{
@@ -271,11 +280,19 @@ function getFilteredData() {{
   return data.filter(d => d.dokumenttype && d.dokumenttype.includes(currentFilter));
 }}
 
+function renderSummary(totalFiltered) {{
+  const totalAll = data.length;
+  const txt = currentFilter
+    ? `Viser ${totalFiltered} av ${totalAll} (filter: ${currentFilter})`
+    : `Viser ${totalFiltered} av ${totalAll}`;
+  document.getElementById("summary").textContent = txt;
+}}
+
 function renderPage(page) {{
   const filtered = getFilteredData();
-  const start = (page-1)*perPage;
-  const end = start+perPage;
-  const items = filtered.slice(start,end);
+  const start = (page-1) * perPage;
+  const end = start + perPage;
+  const items = filtered.slice(start, end);
 
   const html = items.map(d => {{
     const typeClass = cssClassForType(d.dokumenttype || "");
@@ -284,6 +301,7 @@ function renderPage(page) {{
     const filesHtml = (d.filer && d.filer.length)
       ? "<ul class='files'>" + d.filer.map(f => `<li><a href='${{f.url}}' target='_blank'>${{escapeHtml(f.tekst) || "Fil"}}</a></li>`).join("") + "</ul>"
       : (d.detalj_link ? `<p><a href='${{d.detalj_link}}' target='_blank'>Be om innsyn</a></p>` : "");
+
     const am = d.avsender_mottaker ? escapeHtml(d.avsender_mottaker) + " – " : "";
 
     return `
@@ -302,20 +320,43 @@ function renderPage(page) {{
   document.getElementById("container").innerHTML = html;
   renderPagination("pagination-top", page, filtered.length);
   renderPagination("pagination-bottom", page, filtered.length);
+  renderSummary(filtered.length);
 }}
 
 function renderPagination(elementId, page, totalItems) {{
-  const maxPage = Math.ceil(totalItems / perPage);
+  const maxPage = Math.ceil(totalItems / perPage) || 1;
   document.getElementById(elementId).innerHTML =
     `<button onclick='prevPage()' ${{page===1?"disabled":""}}>Forrige</button>
      Side ${{page}} av ${{maxPage}}
      <button onclick='nextPage()' ${{page>=maxPage?"disabled":""}}>Neste</button>`;
 }}
 
-function prevPage() {{ if (currentPage > 1) {{ currentPage--; renderPage(currentPage); }} }}
-function nextPage() {{ const maxPage = Math.ceil(getFilteredData().length/perPage); if (currentPage < maxPage) {{ currentPage++; renderPage(currentPage); }} }}
-function applyFilter() {{ currentFilter = document.getElementById("filterType").value; currentPage = 1; renderPage(currentPage); }}
-function changePerPage() {{ perPage = parseInt(document.getElementById("perPage").value); currentPage = 1; renderPage(currentPage); }}
+function prevPage() {{
+  if (currentPage > 1) {{
+    currentPage--;
+    renderPage(currentPage);
+  }}
+}}
+
+function nextPage() {{
+  const maxPage = Math.ceil(getFilteredData().length / perPage) || 1;
+  if (currentPage < maxPage) {{
+    currentPage++;
+    renderPage(currentPage);
+  }}
+}}
+
+function applyFilter() {{
+  currentFilter = document.getElementById("filterType").value;
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
+function changePerPage() {{
+  perPage = parseInt(document.getElementById("perPage").value, 10);
+  currentPage = 1;
+  renderPage(currentPage);
+}}
 
 renderPage(currentPage);
 </script>
