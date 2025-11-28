@@ -107,28 +107,19 @@ def main(start_date=None, end_date=None):
         page = browser.new_page()
         page.goto(BASE_URL, timeout=20000)
 
-        # 1) Åpne filterpanelet (knappen som viser dato-filteret)
-        # Forsøk med synlig knapptekst "Dato"; faller tilbake til annen knapp om nødvendig.
-        try:
-            page.click("button:has-text('Dato')")
-        except Exception:
-            # Hvis siden bruker annen label, prøv en mer generell knapp i filterområdet
-            try:
-                page.click("button.bc-content-button")
-            except Exception:
-                pass
+        # 1) Klikk på knappen "Velg periode" for å åpne datofeltene
+        page.click("button:has-text('Velg periode')")
 
-        # 2) Vent til modal/backdrop er fjernet slik at klikk ikke blokkeres
+        # 2) Vent til backdrop/modal er fjernet
         try:
             page.wait_for_selector("div.bc-content-modal-backdrop", state="detached", timeout=10000)
         except Exception:
-            # Hvis ikke funnet, fortsett – noen skinn kan ikke bruke backdrop
             pass
 
-        # 3) Velg radioknappen "Velg periode" (value='Other')
+        # 3) Klikk radioknappen "Other" (Velg periode)
         page.click("input[type='radio'][value='Other']")
 
-        # 4) Vent på at datofeltene blir synlige (robuste selectorer for dynamiske id-er)
+        # 4) Vent på datofeltene
         page.wait_for_selector("input[id*='Dato'][id*='start']", timeout=30000)
         page.wait_for_selector("input[id*='Dato'][id*='end']", timeout=30000)
 
@@ -159,7 +150,6 @@ def main(start_date=None, end_date=None):
     update_json(all_docs)
 
 if __name__ == "__main__":
-    # Les inn datoer fra argumenter (workflow sender inn)
     args = sys.argv[1:]
     start_date = None
     end_date = None
