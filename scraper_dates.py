@@ -3,64 +3,148 @@ import json, os
 from datetime import datetime
 
 DATA_FILE = "postliste.json"
-BASE_URL = "https://www.strand.kommune.no/.../sok-i-post-dokumenter-og-saker/#/?page={page}&pageSize=100"
+BASE_URL = "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/?page={page}&pageSize=100"
 
 def load_existing():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE,"r",encoding="utf-8") as f:
-            try: return {d["dokumentID"]:d for d in json.load(f) if "dokumentID" in d}
-            except: return {}
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            try:
+                return {d["dokumentID"]: d for d in json.load(f) if "dokumentID" in d}
+            except Exception:
+                return {}
     return {}
 
 def save_json(data):
-    with open(DATA_FILE,"w",encoding="utf-8") as f: json.dump(data,f,ensure_ascii=False,indent=2)
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def safe_text(el, sel):
+    try:
+        node = el.query_selector(sel)
+        return node.inner_text().strip() if node else ""
+    except Exception:
+        return ""
+
+def format_dato(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").strftime("%d.%m.%Y")
+    except Exception:
+        return s
 
 def parse_date_robust(s):
-    for fmt in ("%d.%m.%Y","%Y-%m-%d"):
-        try: return datetime.strptime(s,fmt).date()
-        except: continue
+    for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
     return None
 
-# hent_side kan gjenbrukes fra scraper.py (samme struktur)
+def hent_side(page_num, browser):
+    url = BASE_URL.format(page=page_num)
+    print(f"[INFO] Åpner side {page_num}: {url}")
+    page = browser.new_page()
+    try:
+        page.goto(url, timeout=20000)
+        page.wait_for_selector("article.bc-content-teaser--item", timeout=10000)
+    except Exception as e:
+        print(f"[WARN] Ingen oppføringer på side {page_num} ({e})")
+        page.close()
+        return []
+
+    docs = []
+    for art in page.query_selector_all("article.bc-content-teaser--item"):
+        dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
+        if not dokid:
+            continue
+        tittel = safe_text(art, ".bc-content-teaser-title-text")
+        dato = format_dato(safe_text(art, ".bc-content-teaser-meta-property--dato dd"))
+        doktype = safe_text(art, ".SakListItem_sakListItemTypeText__16759c")
+        avsender = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
+        mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
+        am = f"Avsender: {avsender}" if avsender else f"Mottaker: {mottaker}" if mottaker else ""
+
+        detalj_link = ""
+        filer = []
+        try:
+            link_elem = art.evaluate_handle("node => node.closest('a')")
+            detalj_link = link_elem.get_attribute("href") if link_elem else ""
+        except Exception:
+            pass
+        if detalj_link:
+            dp = browser.new_page()
+            try:
+                dp.goto(detalj_link, timeout=20000)
+                for fl in dp.query_selector_all("a"):
+                    href, tekst = fl.get_attribute("href"), fl.inner_text()
+                    if href and "/api/presentation/v2/nye-innsyn/filer" in href:
+                        abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
+                        filer.append({"tekst": tekst, "url": abs_url})
+            finally:
+                dp.close()
+
+        status = "Publisert" if filer else "Må bes om innsyn"
+        docs.append({
+            "tittel": tittel,
+            "dato": dato,
+            "dokumentID": dokid,
+            "dokumenttype": doktype,
+            "avsender_mottaker": am,
+            "side": page_num,
+            "detalj_link": detalj_link,
+            "filer": filer,
+            "status": status
+        })
+        print(f"[DEBUG] Hentet: {dokid} | {dato} | {doktype} | {status} | {am}")
+    page.close()
+    return docs
 
 def update_json(new_docs):
-    updated=load_existing()
+    existing = load_existing()
+    updated = dict(existing)
     for d in new_docs:
-        doc_id=d["dokumentID"]; old=updated.get(doc_id)
-        if not old or any(old.get(k)!=d.get(k) for k in ["status","tittel","dokumenttype","avsender_mottaker"]) or len(old.get("filer",[]))!=len(d.get("filer",[])):
-            updated[doc_id]=d
+        doc_id = d["dokumentID"]
+        old = updated.get(doc_id)
+        if not old or any(old.get(k) != d.get(k) for k in ["status","tittel","dokumenttype","avsender_mottaker"]) or len(old.get("filer",[])) != len(d.get("filer",[])):
+            updated[doc_id] = d
             print(f"[{'NEW' if not old else 'UPDATE'}] {doc_id} – {d['tittel']}")
-    data_list=sorted(updated.values(),key=lambda x:x.get("dato",""),reverse=True)
-    save_json(data_list); print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
+    data_list = sorted(updated.values(), key=lambda x: x.get("dato",""), reverse=True)
+    save_json(data_list)
+    print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
-def main(start_date=None,end_date=None):
+def main(start_date=None, end_date=None):
     """
     - start_date + end_date → periode
     - bare start_date → spesifikk dato
     - ingen datoer → alt
     """
     print("[INFO] Starter scraper_dates…")
-    all_docs=[]
+    all_docs = []
     with sync_playwright() as p:
-        browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
-        page_num=1
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        page_num = 1
         while True:
-            docs=hent_side(page_num,browser)
-            if not docs: break
+            docs = hent_side(page_num, browser)
+            if not docs:
+                break
             for d in docs:
-                dt=parse_date_robust(d["dato"])
-                if not dt: continue
+                dt = parse_date_robust(d["dato"])
+                if not dt:
+                    continue
                 if start_date and end_date:
-                    if start_date<=dt<=end_date: all_docs.append(d); print(f"[MATCH] {d['dokumentID']} – {d['dato']}")
+                    if start_date <= dt <= end_date:
+                        all_docs.append(d)
+                        print(f"[MATCH] {d['dokumentID']} – {d['dato']}")
                 elif start_date:
-                    if dt==start_date: all_docs.append(d); print(f"[MATCH] {d['dokumentID']} – {d['dato']}")
+                    if dt == start_date:
+                        all_docs.append(d)
+                        print(f"[MATCH] {d['dokumentID']} – {d['dato']}")
                 else:
                     all_docs.append(d)
-            page_num+=1
+            page_num += 1
         browser.close()
     update_json(all_docs)
 
-if __name__=="__main__":
+if __name__ == "__main__":
     # Eksempel: spesifikk dato
     # main(start_date=datetime(2025,11,20).date())
     # Eksempel: periode
