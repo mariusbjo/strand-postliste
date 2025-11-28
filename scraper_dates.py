@@ -98,6 +98,25 @@ def update_json(new_docs):
     save_json(data_list)
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
+# Funksjon for å velge dato i date-picker
+def velg_dato(page, dato, felt_selector):
+    måneder = ["Januar","Februar","Mars","April","Mai","Juni","Juli","August","September","Oktober","November","Desember"]
+
+    # Klikk i inputfeltet for å åpne date-picker
+    page.click(felt_selector)
+
+    # Klikk på måned/år-velger
+    page.click("div.bc-datepicker-header-month")
+
+    # Velg år
+    page.click(f"div.datePicker-module__years_9333_U1RF0 div:has-text('{dato.year}')")
+
+    # Velg måned
+    page.click(f"div.datePicker-module__months_9333_QuMa8 div:has-text('{måneder[dato.month-1]}')")
+
+    # Velg dag
+    page.click(f"div.datePicker-module__days_9333_vpqVw div:has-text('{dato.day}')")
+
 def main(start_date=None, end_date=None):
     print("[INFO] Starter scraper_dates…")
     all_docs = []
@@ -107,35 +126,22 @@ def main(start_date=None, end_date=None):
         page = browser.new_page()
         page.goto(BASE_URL, timeout=20000)
 
-        # 1) Klikk på knappen "Velg periode" for å åpne datofeltene
-        page.click("button:has-text('Velg periode')")
-
-        # 2) Vent til backdrop/modal er fjernet
-        try:
-            page.wait_for_selector("div.bc-content-modal-backdrop", state="detached", timeout=10000)
-        except Exception:
-            pass
-
-        # 3) Klikk radioknappen "Other" (Velg periode)
+        # Klikk radioknappen "Velg periode"
         page.click("input[type='radio'][value='Other']")
 
-        # 4) Vent på datofeltene
-        page.wait_for_selector("input[id*='Dato'][id*='start']", timeout=30000)
-        page.wait_for_selector("input[id*='Dato'][id*='end']", timeout=30000)
-
-        # 5) Fyll inn datoene
+        # Velg fra- og til-dato via date-picker
         if start_date:
-            page.fill("input[id*='Dato'][id*='start']", start_date.isoformat())
+            velg_dato(page, start_date, "input[id*='Dato'][id*='start']")
         if end_date:
-            page.fill("input[id*='Dato'][id*='end']", end_date.isoformat())
+            velg_dato(page, end_date, "input[id*='Dato'][id*='end']")
 
-        # 6) Klikk på "Vis resultat"
-        page.click("button.JumpToResult_button__a6e46c")
+        # Klikk på "Ferdig" i date-picker
+        page.click("button:has-text('Ferdig')")
 
-        # 7) Vent på resultater
+        # Vent på resultater
         page.wait_for_selector("article.bc-content-teaser--item", timeout=10000)
 
-        # 8) Iterer gjennom sider med filtrerte resultater
+        # Iterer gjennom sider med filtrerte resultater
         page_num = 1
         while True:
             url = f"{BASE_URL}?page={page_num}&pageSize=100"
