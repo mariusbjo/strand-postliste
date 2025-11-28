@@ -67,28 +67,47 @@ def hent_side(url, browser):
         avsender = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
         am = f"Avsender: {avsender}" if avsender else (f"Mottaker: {mottaker}" if mottaker else "")
+
+        # Finn detaljlenke fra tittelen
         detalj_link = ""
-        filer = []
         try:
-            a = art.query_selector("a")
-            detalj_link = a.get_attribute("href") if a else ""
+            link_elem = art.query_selector("a.bc-content-teaser-title")
+            if link_elem:
+                detalj_link = link_elem.get_attribute("href")
         except Exception:
             detalj_link = ""
+        if detalj_link and not detalj_link.startswith("http"):
+            detalj_link = "https://www.strand.kommune.no" + detalj_link
+
+        filer = []
         if detalj_link:
             dp = browser.new_page()
             try:
                 dp.goto(detalj_link, timeout=20000)
-                for fl in dp.query_selector_all("a"):
-                    href = fl.get_attribute("href")
-                    tekst = fl.inner_text()
-                    if href and "/api/presentation/v2/nye-innsyn/filer" in href:
+                dp.wait_for_selector("h4.bc-heading", timeout=5000)
+
+                # Hoveddokument
+                for a in dp.query_selector_all("h4:has-text('Hoveddokument') ~ div a[href]"):
+                    href = a.get_attribute("href")
+                    tekst = (a.inner_text() or "").strip()
+                    if href:
+                        abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
+                        filer.append({"tekst": tekst, "url": abs_url})
+
+                # Vedlegg til saken
+                for a in dp.query_selector_all("h4:has-text('Vedlegg til saken') ~ div a[href]"):
+                    href = a.get_attribute("href")
+                    tekst = (a.inner_text() or "").strip()
+                    if href:
                         abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
                         filer.append({"tekst": tekst, "url": abs_url})
             except Exception:
                 pass
             finally:
                 dp.close()
+
         status = "Publisert" if filer else "Må bes om innsyn"
+
         docs.append({
             "tittel": tittel,
             "dato": dato_str,
@@ -96,7 +115,7 @@ def hent_side(url, browser):
             "dokumentID": dokid,
             "dokumenttype": doktype,
             "avsender_mottaker": am,
-            "detalj_link": detalj_link,
+            "journal_link": detalj_link,
             "filer": filer,
             "status": status
         })
@@ -110,7 +129,7 @@ def update_json(new_docs):
         doc_id = d["dokumentID"]
         old = updated.get(doc_id)
         changed_files = len(old.get("filer", [])) != len(d.get("filer", [])) if old else True
-        changed_core = any(old.get(k) != d.get(k) for k in ["status","tittel","dokumenttype","avsender_mottaker"]) if old else True
+        changed_core = any(old.get(k) != d.get(k) for k in ["status","tittel","dokumenttype","avsender_mottaker","journal_link"]) if old else True
         if not old or changed_files or changed_core:
             updated[doc_id] = d
             print(f"[{'NEW' if not old else 'UPDATE'}] {doc_id} – {d['tittel']}")
