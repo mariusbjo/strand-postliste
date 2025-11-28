@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright
-import json, os
+import json, os, sys
 from datetime import datetime, date
 
 DATA_FILE = "postliste.json"
@@ -99,11 +99,6 @@ def update_json(new_docs):
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
 def main(start_date=None, end_date=None):
-    """
-    - start_date + end_date → periode
-    - bare start_date → spesifikk dato
-    - ingen datoer → alt
-    """
     print("[INFO] Starter scraper_dates…")
     all_docs = []
 
@@ -139,7 +134,14 @@ def main(start_date=None, end_date=None):
     update_json(all_docs)
 
 if __name__ == "__main__":
-    # Eksempel: spesifikk dato
-    # main(start_date=date(2025,11,20))
-    # Eksempel: periode
-    # main(start_date=date(2025,11,1), end_date=date(2025,11,18))
+    # Les inn datoer fra argumenter (workflow sender inn)
+    args = sys.argv[1:]
+    start_date = None
+    end_date = None
+
+    if len(args) >= 1 and args[0]:
+        start_date = datetime.strptime(args[0], "%Y-%m-%d").date()
+    if len(args) >= 2 and args[1]:
+        end_date = datetime.strptime(args[1], "%Y-%m-%d").date()
+
+    main(start_date=start_date, end_date=end_date)
