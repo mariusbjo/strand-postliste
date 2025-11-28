@@ -189,7 +189,7 @@ def main(start_date=None, end_date=None):
 
 if __name__ == "__main__":
     # Eksempel: kjør med én dato
-     main(start_date=datetime(2025,11,20).date())
+    # main(start_date=datetime(2025,11,20).date())
     # Eksempel: kjør med periode
-    # main(start_date=datetime(2025,11,20).date(), end_date=datetime(2025,11,27).date())
+     main(start_date=datetime(2025,11,01).date(), end_date=datetime(2025,11,28).date())
     pass
