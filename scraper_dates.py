@@ -35,7 +35,6 @@ def safe_text(element, selector: str) -> str:
         return ""
 
 def format_dato(dato_str: str) -> str:
-    """Forsøk å konvertere til DD.MM.YYYY, men behold original hvis parsing feiler."""
     try:
         dt = datetime.strptime(dato_str, "%Y-%m-%d")
         return dt.strftime("%d.%m.%Y")
@@ -43,7 +42,6 @@ def format_dato(dato_str: str) -> str:
         return dato_str
 
 def parse_date_robust(dato_str: str):
-    """Returner datetime.date hvis mulig, ellers None. Logger ved feil."""
     for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(dato_str, fmt).date()
@@ -98,7 +96,6 @@ def hent_side(page_num: int, browser):
             detail_page = browser.new_page()
             try:
                 detail_page.goto(detalj_link, timeout=20000)
-                # Oppdater felter hvis de mangler
                 if not avsender:
                     avsender = safe_text(detail_page, ".bc-content-teaser-meta-property--avsender dd")
                 if not mottaker:
@@ -171,6 +168,7 @@ def update_json(new_docs):
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
 def main(start_date=None, end_date=None):
+    print("[INFO] Starter scraper_dates…")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         page_num = 1
@@ -191,13 +189,15 @@ def main(start_date=None, end_date=None):
                     if dt == start_date:
                         all_docs.append(d)
                         print(f"[MATCH] {d['dokumentID']} – {d['dato']}")
+                else:
+                    all_docs.append(d)
             page_num += 1
         browser.close()
         update_json(all_docs)
 
 if __name__ == "__main__":
     # Eksempel: kjør med én dato
-    # main(start_date=datetime(2025,9,15).date())
+    # main(start_date=datetime(2025,11,20).date())
     # Eksempel: kjør med periode
      main(start_date=datetime(2025,11,1).date(), end_date=datetime(2025,11,30).date())
     pass
