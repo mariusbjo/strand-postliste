@@ -31,14 +31,6 @@ def format_dato(s):
     except Exception:
         return s
 
-def parse_date_robust(s):
-    for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(s, fmt).date()
-        except ValueError:
-            continue
-    return None
-
 def hent_side(url, browser):
     page = browser.new_page()
     try:
@@ -117,42 +109,30 @@ def main(start_date=None, end_date=None):
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        page = browser.new_page()
+        page.goto(BASE_URL, timeout=20000)
 
-        # Primær: bruk kommunens URL-filter
-        if start_date and end_date:
-            url = f"{BASE_URL}?Dato={start_date.isoformat()}&Dato={end_date.isoformat()}&Dato=Other"
-        elif start_date:
-            url = f"{BASE_URL}?Dato={start_date.isoformat()}&Dato={start_date.isoformat()}&Dato=Other"
-        else:
-            url = BASE_URL
+        # Sett fra- og til-dato i inputfeltene
+        if start_date:
+            page.fill("#daterangepicker-mi252-Dato-zxu23-input-start", start_date.isoformat())
+        if end_date:
+            page.fill("#daterangepicker-mi252-Dato-zxu23-input-end", end_date.isoformat())
 
-        print(f"[INFO] Prøver primærmetode med URL-filter: {url}")
-        docs = hent_side(url, browser)
+        # Klikk på "Vis resultat"-knappen
+        page.click("button.JumpToResult_button__a6e46c")
 
-        if docs:
-            print(f"[INFO] Fant {len(docs)} oppføringer via URL-filter")
+        # Vent på resultater
+        page.wait_for_selector("article.bc-content-teaser--item", timeout=10000)
+
+        # Iterer gjennom sider med filtrerte resultater
+        page_num = 1
+        while True:
+            url = f"{BASE_URL}?page={page_num}&pageSize=100"
+            docs = hent_side(url, browser)
+            if not docs:
+                break
             all_docs.extend(docs)
-        else:
-            print("[WARN] Ingen treff via URL-filter, faller tilbake til robust metode…")
-            page_num = 1
-            while True:
-                url = f"{BASE_URL}?page={page_num}&pageSize=100"
-                docs = hent_side(url, browser)
-                if not docs:
-                    break
-                for d in docs:
-                    dt = parse_date_robust(d["dato"])
-                    if not dt:
-                        continue
-                    if start_date and end_date:
-                        if start_date <= dt <= end_date:
-                            all_docs.append(d)
-                    elif start_date:
-                        if dt == start_date:
-                            all_docs.append(d)
-                    else:
-                        all_docs.append(d)
-                page_num += 1
+            page_num += 1
 
         browser.close()
 
@@ -162,4 +142,4 @@ if __name__ == "__main__":
     # Eksempel: spesifikk dato
     # main(start_date=date(2025,11,20))
     # Eksempel: periode
-     main(start_date=date(2025,11,1), end_date=date(2025,11,18))
+    # main(start_date=date(2025,11,1), end_date=date(2025,11,18))
