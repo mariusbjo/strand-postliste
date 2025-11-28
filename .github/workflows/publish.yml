@@ -5,7 +5,7 @@ on:
     inputs:
       start_date:
         description: "Startdato (YYYY-MM-DD)"
-        required: false
+        required: true
       end_date:
         description: "Sluttdato (YYYY-MM-DD)"
         required: false
@@ -31,13 +31,7 @@ jobs:
 
       - name: Kjør scraper_dates med input
         run: |
-          if [ -n "${{ github.event.inputs.start_date }}" ] && [ -n "${{ github.event.inputs.end_date }}" ]; then
-            python -c "from datetime import datetime; import scraper_dates; scraper_dates.main(start_date=datetime.strptime('${{ github.event.inputs.start_date }}','%Y-%m-%d').date(), end_date=datetime.strptime('${{ github.event.inputs.end_date }}','%Y-%m-%d').date())"
-          elif [ -n "${{ github.event.inputs.start_date }}" ]; then
-            python -c "from datetime import datetime; import scraper_dates; scraper_dates.main(start_date=datetime.strptime('${{ github.event.inputs.start_date }}','%Y-%m-%d').date())"
-          else
-            python scraper_dates.py
-          fi
+          python scraper_dates.py "${{ github.event.inputs.start_date }}" "${{ github.event.inputs.end_date }}"
 
       - name: Generer HTML
         run: python generate_html.py
