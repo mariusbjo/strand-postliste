@@ -35,11 +35,23 @@ def safe_text(element, selector: str) -> str:
         return ""
 
 def format_dato(dato_str: str) -> str:
+    """Forsøk å konvertere til DD.MM.YYYY, men behold original hvis parsing feiler."""
     try:
         dt = datetime.strptime(dato_str, "%Y-%m-%d")
         return dt.strftime("%d.%m.%Y")
     except Exception:
         return dato_str
+
+def parse_date_robust(dato_str: str):
+    """Returner datetime.date hvis mulig, ellers None. Logger ved feil."""
+    for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(dato_str, fmt).date()
+        except ValueError:
+            continue
+    if dato_str:
+        print(f"[WARN] Klarte ikke tolke dato: {dato_str}")
+    return None
 
 def hent_side(page_num: int, browser):
     url = BASE_URL.format(page=page_num)
@@ -82,16 +94,10 @@ def hent_side(page_num: int, browser):
             detalj_link = ""
 
         filer = []
-        # Hvis vi har detaljlenke, hent filer og evt. avsender/mottaker/doktype derfra
         if detalj_link:
             detail_page = browser.new_page()
             try:
                 detail_page.goto(detalj_link, timeout=20000)
-                # Vent på metadatafelter
-                try:
-                    detail_page.wait_for_selector(".bc-content-teaser-meta-property--dokumentID dd", timeout=5000)
-                except Exception:
-                    pass
                 # Oppdater felter hvis de mangler
                 if not avsender:
                     avsender = safe_text(detail_page, ".bc-content-teaser-meta-property--avsender dd")
@@ -129,6 +135,7 @@ def hent_side(page_num: int, browser):
             "filer": filer,
             "status": status
         })
+        print(f"[DEBUG] Hentet: {dokid} | {dato} | {doktype} | {status} | {am}")
     page.close()
     return dokumenter
 
@@ -173,23 +180,24 @@ def main(start_date=None, end_date=None):
             if not docs:
                 break
             for d in docs:
-                try:
-                    dt = datetime.strptime(d["dato"], "%d.%m.%Y").date()
-                except Exception:
+                dt = parse_date_robust(d["dato"])
+                if not dt:
                     continue
                 if start_date and end_date:
                     if start_date <= dt <= end_date:
                         all_docs.append(d)
+                        print(f"[MATCH] {d['dokumentID']} – {d['dato']}")
                 elif start_date:
                     if dt == start_date:
                         all_docs.append(d)
+                        print(f"[MATCH] {d['dokumentID']} – {d['dato']}")
             page_num += 1
         browser.close()
         update_json(all_docs)
 
 if __name__ == "__main__":
     # Eksempel: kjør med én dato
-    # main(start_date=datetime(2025,11,20).date())
+    # main(start_date=datetime(2025,9,15).date())
     # Eksempel: kjør med periode
-     main(start_date=datetime(2025,09,01).date(), end_date=datetime(2025,09,30).date())
+     main(start_date=datetime(2025,11,1).date(), end_date=datetime(2025,11,30).date())
     pass
