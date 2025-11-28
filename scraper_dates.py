@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import json, os, sys
-from datetime import datetime, date
+from datetime import datetime
 
 DATA_FILE = "postliste.json"
 BASE_URL = "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/"
@@ -107,11 +107,15 @@ def main(start_date=None, end_date=None):
         page = browser.new_page()
         page.goto(BASE_URL, timeout=20000)
 
-        # Sett fra- og til-dato i inputfeltene
+        # Vent på at feltene finnes
+        page.wait_for_selector("input[id*='Dato'][id*='start']", timeout=30000)
+        page.wait_for_selector("input[id*='Dato'][id*='end']", timeout=30000)
+
+        # Fyll inn datoene
         if start_date:
-            page.fill("#daterangepicker-mi252-Dato-zxu23-input-start", start_date.isoformat())
+            page.fill("input[id*='Dato'][id*='start']", start_date.isoformat())
         if end_date:
-            page.fill("#daterangepicker-mi252-Dato-zxu23-input-end", end_date.isoformat())
+            page.fill("input[id*='Dato'][id*='end']", end_date.isoformat())
 
         # Klikk på "Vis resultat"-knappen
         page.click("button.JumpToResult_button__a6e46c")
