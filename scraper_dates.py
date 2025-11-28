@@ -28,7 +28,9 @@ def save_json(data):
 def safe_text(element, selector: str) -> str:
     try:
         node = element.query_selector(selector)
-        return node.inner_text().strip() if node else ""
+        if node:
+            return node.inner_text().strip()
+        return ""
     except Exception:
         return ""
 
@@ -44,8 +46,8 @@ def hent_side(page_num: int, browser):
     print(f"[INFO] Åpner side {page_num}: {url}")
     page = browser.new_page()
     try:
-        page.goto(url, timeout=15000)
-        page.wait_for_selector("article.bc-content-teaser--item", timeout=5000)
+        page.goto(url, timeout=20000)
+        page.wait_for_selector("article.bc-content-teaser--item", timeout=10000)
     except Exception as e:
         print(f"[WARN] Ingen oppføringer på side {page_num} ({e})")
         page.close()
@@ -80,10 +82,30 @@ def hent_side(page_num: int, browser):
             detalj_link = ""
 
         filer = []
+        # Hvis vi har detaljlenke, hent filer og evt. avsender/mottaker/doktype derfra
         if detalj_link:
             detail_page = browser.new_page()
             try:
-                detail_page.goto(detalj_link, timeout=15000)
+                detail_page.goto(detalj_link, timeout=20000)
+                # Vent på metadatafelter
+                try:
+                    detail_page.wait_for_selector(".bc-content-teaser-meta-property--dokumentID dd", timeout=5000)
+                except Exception:
+                    pass
+                # Oppdater felter hvis de mangler
+                if not avsender:
+                    avsender = safe_text(detail_page, ".bc-content-teaser-meta-property--avsender dd")
+                if not mottaker:
+                    mottaker = safe_text(detail_page, ".bc-content-teaser-meta-property--mottaker dd")
+                if not doktype:
+                    doktype = safe_text(detail_page, ".SakListItem_sakListItemTypeText__16759c")
+                if avsender:
+                    am = f"Avsender: {avsender}"
+                elif mottaker:
+                    am = f"Mottaker: {mottaker}"
+                else:
+                    am = ""
+
                 file_links = detail_page.query_selector_all("a")
                 for fl in file_links:
                     href = fl.get_attribute("href")
@@ -94,6 +116,8 @@ def hent_side(page_num: int, browser):
             finally:
                 detail_page.close()
 
+        status = "Publisert" if filer else "Må bes om innsyn"
+
         dokumenter.append({
             "tittel": tittel,
             "dato": dato,
@@ -103,7 +127,7 @@ def hent_side(page_num: int, browser):
             "side": page_num,
             "detalj_link": detalj_link,
             "filer": filer,
-            "status": "Publisert" if filer else "Må bes om innsyn"
+            "status": status
         })
     page.close()
     return dokumenter
