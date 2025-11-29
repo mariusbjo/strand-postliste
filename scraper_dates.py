@@ -181,4 +181,7 @@ if __name__ == "__main__":
         start_date = datetime.strptime(args[0], "%Y-%m-%d").date()
     if len(args) >= 2 and args[1]:
         end_date = datetime.strptime(args[1], "%Y-%m-%d").date()
+    # Hvis bare én dato er gitt, bruk den som både start og slutt
+    if start_date and not end_date:
+        end_date = start_date
     main(start_date=start_date, end_date=end_date)
