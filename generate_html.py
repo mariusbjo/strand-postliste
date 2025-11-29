@@ -75,7 +75,7 @@ header .updated {{ color: var(--muted); margin-bottom: 0.5rem; font-size: 0.9rem
 }}
 .controls .field {{ display: flex; flex-direction: column; gap: .25rem; }}
 .controls label {{ font-weight: 600; color: var(--text); font-size: 0.85rem; }}
-.controls input[type="text"], .controls select, .controls button {{
+.controls input[type="text"], .controls input[type="date"], .controls select, .controls button {{
   padding: .5rem .6rem;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -83,6 +83,9 @@ header .updated {{ color: var(--muted); margin-bottom: 0.5rem; font-size: 0.9rem
   font-size: 0.95rem;
 }}
 .controls .actions {{ display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }}
+.controls .quick {{
+  display: flex; gap: .5rem; flex-wrap: wrap;
+}}
 
 .container {{
   display: grid;
@@ -147,7 +150,7 @@ ul.files li {{ margin: .25rem 0; }}
 }}
 .summary {{ color: var(--muted); font-size: .95rem; }}
 
-/* Type farger (klasser brukes for tydelig markering) */
+/* Type farger */
 .type-inngående {{ color: #1f6feb; font-weight: 600; }}
 .type-utgående {{ color: #b78103; font-weight: 600; }}
 .type-sakskart {{ color: #7d3fc2; font-weight: 600; }}
@@ -179,6 +182,13 @@ body.dark {{
   font-size: 0.95rem;
 }}
 .toggle-dark:focus {{ outline: 2px solid var(--border); }}
+
+/* Print-stiler (PDF-eksport gjennom vinduets print) */
+@media print {{
+  header.sticky-header, .pagination, .toggle-dark, .controls {{ display: none !important; }}
+  body {{ margin: 0.5cm; }}
+  .card {{ break-inside: avoid; border: 1px solid #999; }}
+}}
 </style>
 </head>
 <body>
@@ -188,8 +198,24 @@ body.dark {{
 
   <section class="controls" aria-label="Kontroller for filtrering, søk og sortering">
     <div class="field">
-      <label for="searchInput">Søk:</label>
+      <label for="searchInput">Søk i tittel/dokumentID:</label>
       <input id="searchInput" type="text" placeholder="Skriv for å søke …" oninput="applySearch()" />
+    </div>
+    <div class="field">
+      <label for="searchAM">Søk i avsender/mottaker:</label>
+      <input id="searchAM" type="text" placeholder="Avsender eller mottaker …" oninput="applySearch()" />
+    </div>
+    <div class="field">
+      <label for="dateFrom">Fra dato:</label>
+      <input id="dateFrom" type="date" onchange="applyDateFilter()" />
+    </div>
+    <div class="field">
+      <label for="dateTo">Til dato:</label>
+      <input id="dateTo" type="date" onchange="applyDateFilter()" />
+    </div>
+    <div class="quick">
+      <button onclick="setQuickRange('week')" title="Siste 7 dager">Siste uke</button>
+      <button onclick="setQuickRange('month')" title="Siste 30 dager">Siste måned</button>
     </div>
     <div class="field">
       <label for="filterType">Dokumenttype:</label>
@@ -234,6 +260,8 @@ body.dark {{
     </div>
     <div class="actions">
       <button onclick="exportCSV()">Eksporter CSV</button>
+      <button onclick="exportPDF()">Eksporter PDF</button>
+      <button onclick="copyShareLink()">Kopier delingslenke</button>
       <span class="summary" id="summary"></span>
     </div>
   </section>
@@ -251,10 +279,13 @@ let perPage = {per_page};
 let currentPage = 1;
 let currentFilter = "";
 let currentSearch = "";
+let currentSearchAM = "";
 let currentStatus = "";
 let currentSort = "dato-desc";
+let dateFrom = "";
+let dateTo = "";
 
-// Persist mørk modus med localStorage
+// Init dark mode if saved
 (function initTheme() {{
   const saved = localStorage.getItem("dark-mode");
   if (saved === "on") document.body.classList.add("dark");
@@ -294,7 +325,7 @@ function iconForType(doktype) {{
   return "📄";
 }}
 
-// Dato for sortering: preferer parsed_date (ISO), fallback til DD.MM.YYYY
+// Sorteringsdato (foretrekk parsed_date; fallback til d.dato DD.MM.YYYY)
 function getDateForSort(d) {{
   const iso = d.parsed_date || "";
   if (iso) {{
@@ -312,20 +343,80 @@ function getDateForSort(d) {{
   return 0;
 }}
 
+function applySearch() {{
+  currentSearch = document.getElementById("searchInput").value.trim();
+  currentSearchAM = document.getElementById("searchAM").value.trim();
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
+function applyDateFilter() {{
+  dateFrom = document.getElementById("dateFrom").value; // ISO yyyy-mm-dd
+  dateTo = document.getElementById("dateTo").value;     // ISO yyyy-mm-dd
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
+function setQuickRange(range) {{
+  const now = new Date();
+  if (range === "week") {{
+    const lastWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    document.getElementById("dateFrom").value = lastWeek.toISOString().split("T")[0];
+    document.getElementById("dateTo").value = now.toISOString().split("T")[0];
+  }}
+  if (range === "month") {{
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    document.getElementById("dateFrom").value = lastMonth.toISOString().split("T")[0];
+    document.getElementById("dateTo").value = now.toISOString().split("T")[0];
+  }}
+  applyDateFilter();
+}}
+
+function applyFilter() {{
+  currentFilter = document.getElementById("filterType").value;
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
+function applyStatusFilter() {{
+  currentStatus = document.getElementById("statusFilter").value;
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
+function applySort() {{
+  currentSort = document.getElementById("sortSelect").value;
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
+function changePerPage() {{
+  perPage = parseInt(document.getElementById("perPage").value, 10);
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
 function getFilteredData() {{
   let arr = data.slice();
 
-  // Søk
+  // Søk i tittel/dokumentID
   if (currentSearch) {{
     const q = currentSearch.toLowerCase();
     arr = arr.filter(d =>
       (d.tittel && d.tittel.toLowerCase().includes(q)) ||
-      (d.dokumentID && String(d.dokumentID).toLowerCase().includes(q)) ||
+      (d.dokumentID && String(d.dokumentID).toLowerCase().includes(q))
+    );
+  }}
+
+  // Søk i avsender/mottaker
+  if (currentSearchAM) {{
+    const q = currentSearchAM.toLowerCase();
+    arr = arr.filter(d =>
       (d.avsender_mottaker && d.avsender_mottaker.toLowerCase().includes(q))
     );
   }}
 
-  // Type
+  // Dokumenttype
   if (currentFilter) {{
     arr = arr.filter(d => d.dokumenttype && d.dokumenttype.includes(currentFilter));
   }}
@@ -333,6 +424,21 @@ function getFilteredData() {{
   // Status
   if (currentStatus) {{
     arr = arr.filter(d => d.status === currentStatus);
+  }}
+
+  // Dato-intervall (bruk d.dato i format DD.MM.YYYY)
+  if (dateFrom || dateTo) {{
+    const from = dateFrom ? new Date(dateFrom) : null;
+    const to = dateTo ? new Date(dateTo) : null;
+    arr = arr.filter(d => {{
+      const parts = (d.dato || "").split(".");
+      if (parts.length !== 3) return false;
+      const [DD, MM, YYYY] = parts;
+      const pd = new Date(parseInt(YYYY,10), parseInt(MM,10)-1, parseInt(DD,10));
+      if (from && pd < from) return false;
+      if (to && pd > to) return false;
+      return true;
+    }});
   }}
 
   // Sortering
@@ -353,9 +459,11 @@ function renderSummary(totalFiltered) {{
   const totalAll = data.length;
   const parts = [];
   if (currentSearch) parts.push(`søk: "${{currentSearch}}"`);
+  if (currentSearchAM) parts.push(`avsender/mottaker: "${{currentSearchAM}}"`);
   if (currentFilter) parts.push(`type: ${{currentFilter}}`);
   if (currentStatus) parts.push(`status: ${{currentStatus}}`);
-  const ctx = parts.length ? ` (${{parts.join(", ")}})` : "";
+  if (dateFrom || dateTo) parts.push(`dato: ${{dateFrom||'–'}} til ${{dateTo||'–'}}`);
+  const ctx = parts.length ? ` ({parts.join(", ")})` : "";
   document.getElementById("summary").textContent =
     `Viser ${{totalFiltered}} av ${{totalAll}}${{ctx}}`;
 }}
@@ -427,36 +535,6 @@ function nextPage() {{
   }}
 }}
 
-function applyFilter() {{
-  currentFilter = document.getElementById("filterType").value;
-  currentPage = 1;
-  renderPage(currentPage);
-}}
-
-function applyStatusFilter() {{
-  currentStatus = document.getElementById("statusFilter").value;
-  currentPage = 1;
-  renderPage(currentPage);
-}}
-
-function applySearch() {{
-  currentSearch = document.getElementById("searchInput").value.trim();
-  currentPage = 1;
-  renderPage(currentPage);
-}}
-
-function applySort() {{
-  currentSort = document.getElementById("sortSelect").value;
-  currentPage = 1;
-  renderPage(currentPage);
-}}
-
-function changePerPage() {{
-  perPage = parseInt(document.getElementById("perPage").value, 10);
-  currentPage = 1;
-  renderPage(currentPage);
-}}
-
 function exportCSV() {{
   const filtered = getFilteredData();
   const rows = [["Dato","DokumentID","Tittel","Dokumenttype","Avsender/Mottaker","Status","Journalpostlenke"]];
@@ -484,12 +562,69 @@ function exportCSV() {{
   URL.revokeObjectURL(url);
 }}
 
-document.addEventListener("DOMContentLoaded", () => {{
+function exportPDF() {{
+  // Bruk printvennlig CSS og åpne systemets "Lagre som PDF"
+  window.print();
+}}
+
+function copyShareLink() {{
+  const params = new URLSearchParams();
+  if (currentSearch) params.set("q", currentSearch);
+  if (currentSearchAM) params.set("am", currentSearchAM);
+  if (currentFilter) params.set("type", currentFilter);
+  if (currentStatus) params.set("status", currentStatus);
+  if (dateFrom) params.set("from", dateFrom);
+  if (dateTo) params.set("to", dateTo);
+  params.set("sort", currentSort);
+  params.set("perPage", String(perPage));
+  params.set("page", String(currentPage));
+
+  const shareUrl = window.location.origin + window.location.pathname + "?" + params.toString();
+
+  navigator.clipboard.writeText(shareUrl).then(() => {{
+    const el = document.getElementById("summary");
+    const prev = el.textContent;
+    el.textContent = "Delingslenke kopiert!";
+    setTimeout(() => el.textContent = prev, 1500);
+  }});
+}}
+
+function applyParamsFromURL() {{
+  const url = new URL(window.location.href);
+  const q = url.searchParams.get("q") || "";
+  const am = url.searchParams.get("am") || "";
+  const type = url.searchParams.get("type") || "";
+  const status = url.searchParams.get("status") || "";
+  const from = url.searchParams.get("from") || "";
+  const to = url.searchParams.get("to") || "";
+  const sort = url.searchParams.get("sort") || "dato-desc";
+  const pp = parseInt(url.searchParams.get("perPage") || "{per_page}", 10);
+  const pg = parseInt(url.searchParams.get("page") || "1", 10);
+
+  document.getElementById("searchInput").value = q;
+  document.getElementById("searchAM").value = am;
+  document.getElementById("filterType").value = type;
+  document.getElementById("statusFilter").value = status;
+  document.getElementById("dateFrom").value = from;
+  document.getElementById("dateTo").value = to;
+  document.getElementById("sortSelect").value = sort;
   const perPageSelect = document.getElementById("perPage");
-  if (perPageSelect) {{
-    const opt = Array.from(perPageSelect.options).find(o => parseInt(o.value,10) === perPage);
-    if (opt) perPageSelect.value = String(perPage);
-  }}
+  const opt = Array.from(perPageSelect.options).find(o => parseInt(o.value,10) === pp);
+  if (opt) perPageSelect.value = String(pp);
+
+  currentSearch = q;
+  currentSearchAM = am;
+  currentFilter = type;
+  currentStatus = status;
+  dateFrom = from;
+  dateTo = to;
+  currentSort = sort;
+  perPage = pp;
+  currentPage = pg;
+}}
+
+document.addEventListener("DOMContentLoaded", () => {{
+  applyParamsFromURL();
   renderPage(currentPage);
 }});
 </script>
