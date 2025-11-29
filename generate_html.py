@@ -53,7 +53,6 @@ body {{
   margin: 1rem;
   color: var(--text);
   background: var(--bg);
-  transition: background 0.3s, color 0.3s;
 }}
 header.sticky-header {{
   position: sticky;
@@ -83,9 +82,7 @@ header .updated {{ color: var(--muted); margin-bottom: 0.5rem; font-size: 0.9rem
   font-size: 0.95rem;
 }}
 .controls .actions {{ display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }}
-.controls .quick {{
-  display: flex; gap: .5rem; flex-wrap: wrap;
-}}
+.controls .quick {{ display: flex; gap: .5rem; flex-wrap: wrap; }}
 
 .container {{
   display: grid;
@@ -107,31 +104,15 @@ header .updated {{ color: var(--muted); margin-bottom: 0.5rem; font-size: 0.9rem
   flex-direction: column;
   gap: .5rem;
   background: var(--bg);
-  transition: background 0.3s, color 0.3s, border-color 0.3s;
 }}
-.card h3 {{
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.3;
-}}
-.meta {{
-  color: var(--muted);
-  font-size: 0.9rem;
-}}
+.card h3 {{ margin: 0; font-size: 1rem; line-height: 1.3; }}
+.meta {{ color: var(--muted); font-size: 0.9rem; }}
 .status-publisert {{ color: var(--green); font-weight: 600; }}
 .status-innsyn {{ color: var(--red); font-weight: 600; }}
 
-ul.files {{
-  margin: .25rem 0 0 0;
-  padding-left: 1rem;
-  font-size: 0.9rem;
-}}
+ul.files {{ margin: .25rem 0 0 0; padding-left: 1rem; font-size: 0.9rem; }}
 ul.files li {{ margin: .25rem 0; }}
-.card .footer-link a {{
-  color: var(--link);
-  text-decoration: none;
-  font-size: 0.9rem;
-}}
+.card .footer-link a {{ color: var(--link); text-decoration: none; font-size: 0.9rem; }}
 .card .footer-link a:hover {{ text-decoration: underline; }}
 
 .pagination {{
@@ -159,33 +140,14 @@ ul.files li {{ margin: .25rem 0; }}
 .type-saksfremlegg {{ color: #14532d; font-weight: 600; }}
 .type-internt {{ color: #667085; font-weight: 600; }}
 
-/* Dark mode */
-body.dark {{
-  --bg: #0f1115;
-  --text: #e6edf3;
-  --muted: #9aa7b5;
-  --border: #263041;
-  --link: #58a6ff;
-  --green: #3fb950;
-  --red: #ff6b6b;
-}}
-.toggle-dark {{
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  background: var(--link);
-  color: #fff;
-  border: none;
-  padding: .6rem .9rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 0.95rem;
-}}
-.toggle-dark:focus {{ outline: 2px solid var(--border); }}
+/* Stats */
+#stats {{ margin: 2rem 0; }}
+.stats-container {{ display: flex; flex-wrap: wrap; gap: 2rem; }}
+.stats-container > div {{ flex: 1; min-width: 300px; }}
+.stats-container h3 {{ margin: 0 0 .5rem 0; font-size: 1rem; }}
 
-/* Print-stiler (PDF-eksport gjennom vinduets print) */
 @media print {{
-  header.sticky-header, .pagination, .toggle-dark, .controls {{ display: none !important; }}
+  header.sticky-header, .controls, .pagination, .toggle-dark {{ display: none !important; }}
   body {{ margin: 0.5cm; }}
   .card {{ break-inside: avoid; border: 1px solid #999; }}
 }}
@@ -267,12 +229,25 @@ body.dark {{
   </section>
 </header>
 
+<section id="stats" aria-label="Statistikk og oversikter">
+  <h2>📈 Statistikk</h2>
+  <div class="stats-container">
+    <div>
+      <h3>Publisert per uke</h3>
+      <canvas id="chartWeekly"></canvas>
+    </div>
+    <div>
+      <h3>Fordeling på dokumenttyper</h3>
+      <canvas id="chartTypes"></canvas>
+    </div>
+  </div>
+</section>
+
 <nav id="pagination-top" class="pagination" aria-label="Paginering topp"></nav>
 <main id="container" class="container"></main>
 <nav id="pagination-bottom" class="pagination" aria-label="Paginering bunn"></nav>
 
-<button class="toggle-dark" onclick="toggleDarkMode()" aria-label="Veksle mørk modus">🌙 Mørk modus</button>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const data = {json.dumps(data, ensure_ascii=False)};
 let perPage = {per_page};
@@ -285,17 +260,7 @@ let currentSort = "dato-desc";
 let dateFrom = "";
 let dateTo = "";
 
-// Init dark mode if saved
-(function initTheme() {{
-  const saved = localStorage.getItem("dark-mode");
-  if (saved === "on") document.body.classList.add("dark");
-}})();
-
-function toggleDarkMode() {{
-  document.body.classList.toggle("dark");
-  localStorage.setItem("dark-mode", document.body.classList.contains("dark") ? "on" : "off");
-}}
-
+// Utils
 function escapeHtml(s) {{
   if (!s) return "";
   return s.replace(/[&<>"]/g, c => ({{"&":"&amp;","<":"&lt;","\\": "&quot;"}})[c]);
@@ -325,24 +290,20 @@ function iconForType(doktype) {{
   return "📄";
 }}
 
-// Sorteringsdato (foretrekk parsed_date; fallback til d.dato DD.MM.YYYY)
-function getDateForSort(d) {{
-  const iso = d.parsed_date || "";
-  if (iso) {{
-    const t = Date.parse(iso);
-    if (!isNaN(t)) return t;
-  }}
-  const dd = d.dato || "";
-  if (!dd) return 0;
-  const parts = dd.split(".");
-  if (parts.length === 3) {{
-    const [DD, MM, YYYY] = parts;
-    const t = Date.parse(`${{YYYY}}-${{MM}}-${{DD}}`);
-    return isNaN(t) ? 0 : t;
-  }}
-  return 0;
+function parseDDMMYYYY(d) {{
+  if (!d) return null;
+  const parts = d.split(".");
+  if (parts.length !== 3) return null;
+  const [DD, MM, YYYY] = parts.map(x => parseInt(x, 10));
+  return new Date(YYYY, MM - 1, DD);
 }}
 
+function getDateForSort(d) {{
+  const dt = parseDDMMYYYY(d.dato);
+  return dt ? dt.getTime() : 0;
+}}
+
+// Filters
 function applySearch() {{
   currentSearch = document.getElementById("searchInput").value.trim();
   currentSearchAM = document.getElementById("searchAM").value.trim();
@@ -399,7 +360,7 @@ function changePerPage() {{
 function getFilteredData() {{
   let arr = data.slice();
 
-  // Søk i tittel/dokumentID
+  // Søk tittel/dokID
   if (currentSearch) {{
     const q = currentSearch.toLowerCase();
     arr = arr.filter(d =>
@@ -408,15 +369,13 @@ function getFilteredData() {{
     );
   }}
 
-  // Søk i avsender/mottaker
+  // Søk avsender/mottaker
   if (currentSearchAM) {{
     const q = currentSearchAM.toLowerCase();
-    arr = arr.filter(d =>
-      (d.avsender_mottaker && d.avsender_mottaker.toLowerCase().includes(q))
-    );
+    arr = arr.filter(d => (d.avsender_mottaker && d.avsender_mottaker.toLowerCase().includes(q)));
   }}
 
-  // Dokumenttype
+  // Type
   if (currentFilter) {{
     arr = arr.filter(d => d.dokumenttype && d.dokumenttype.includes(currentFilter));
   }}
@@ -426,15 +385,13 @@ function getFilteredData() {{
     arr = arr.filter(d => d.status === currentStatus);
   }}
 
-  // Dato-intervall (bruk d.dato i format DD.MM.YYYY)
+  // Dato-intervall (DD.MM.YYYY sammenlignet mot ISO fra inputs)
   if (dateFrom || dateTo) {{
     const from = dateFrom ? new Date(dateFrom) : null;
     const to = dateTo ? new Date(dateTo) : null;
     arr = arr.filter(d => {{
-      const parts = (d.dato || "").split(".");
-      if (parts.length !== 3) return false;
-      const [DD, MM, YYYY] = parts;
-      const pd = new Date(parseInt(YYYY,10), parseInt(MM,10)-1, parseInt(DD,10));
+      const pd = parseDDMMYYYY(d.dato);
+      if (!pd) return false;
       if (from && pd < from) return false;
       if (to && pd > to) return false;
       return true;
@@ -463,9 +420,8 @@ function renderSummary(totalFiltered) {{
   if (currentFilter) parts.push(`type: ${{currentFilter}}`);
   if (currentStatus) parts.push(`status: ${{currentStatus}}`);
   if (dateFrom || dateTo) parts.push(`dato: ${{dateFrom||'–'}} til ${{dateTo||'–'}}`);
-  const ctx = parts.length ? ` ({parts.join(", ")})` : "";
-  document.getElementById("summary").textContent =
-    `Viser ${{totalFiltered}} av ${{totalAll}}${{ctx}}`;
+  const ctx = parts.length ? ` (${parts.join(", ")})` : "";
+  document.getElementById("summary").textContent = `Viser ${{totalFiltered}} av ${{totalAll}}${{ctx}}`;
 }}
 
 function renderPage(page) {{
@@ -480,7 +436,6 @@ function renderPage(page) {{
     const statusClass = d.status === "Publisert" ? "status-publisert" : "status-innsyn";
     const link = d.journal_link || d.detalj_link || "";
 
-    // Betinget visning av dokumenter/innsyn
     let filesHtml = "";
     if (d.status === "Publisert" && d.filer && d.filer.length) {{
       filesHtml = "<ul class='files'>" + d.filer.map(f => `
@@ -491,7 +446,7 @@ function renderPage(page) {{
     }}
 
     const am = d.avsender_mottaker ? escapeHtml(d.avsender_mottaker) + " – " : "";
-    const datoVis = escapeHtml(d.dato || (d.parsed_date ? new Date(d.parsed_date).toLocaleDateString("no-NO") : ""));
+    const datoVis = escapeHtml(d.dato);
 
     return `
       <article class='card'>
@@ -510,6 +465,7 @@ function renderPage(page) {{
   renderPagination("pagination-top", page, filtered.length);
   renderPagination("pagination-bottom", page, filtered.length);
   renderSummary(filtered.length);
+  buildStats(filtered);
 }}
 
 function renderPagination(elementId, page, totalItems) {{
@@ -541,7 +497,7 @@ function exportCSV() {{
   filtered.forEach(d => {{
     const link = d.journal_link || d.detalj_link || "";
     rows.push([
-      d.dato || (d.parsed_date || ""),
+      d.dato || "",
       String(d.dokumentID || ""),
       (d.tittel || "").replace(/\\s+/g, " ").trim(),
       d.dokumenttype || "",
@@ -562,10 +518,7 @@ function exportCSV() {{
   URL.revokeObjectURL(url);
 }}
 
-function exportPDF() {{
-  // Bruk printvennlig CSS og åpne systemets "Lagre som PDF"
-  window.print();
-}}
+function exportPDF() {{ window.print(); }}
 
 function copyShareLink() {{
   const params = new URLSearchParams();
@@ -578,9 +531,7 @@ function copyShareLink() {{
   params.set("sort", currentSort);
   params.set("perPage", String(perPage));
   params.set("page", String(currentPage));
-
   const shareUrl = window.location.origin + window.location.pathname + "?" + params.toString();
-
   navigator.clipboard.writeText(shareUrl).then(() => {{
     const el = document.getElementById("summary");
     const prev = el.textContent;
@@ -589,6 +540,86 @@ function copyShareLink() {{
   }});
 }}
 
+// Stats (Chart.js)
+let weeklyChart = null;
+let typesChart = null;
+
+function buildStats(filtered) {{
+  // Publisert per uke (ISO uke-nummer)
+  const weekly = {{}};
+  filtered.forEach(d => {{
+    if (d.status === "Publisert" && d.dato) {{
+      const dt = parseDDMMYYYY(d.dato);
+      if (!dt) return;
+      const target = new Date(dt.valueOf());
+      const dayNr = (dt.getDay() + 6) % 7;
+      target.setDate(target.getDate() - dayNr + 3);
+      const firstThursday = new Date(target.getFullYear(),0,4);
+      const week = 1 + Math.round(((target.valueOf() - firstThursday.valueOf()) / 86400000 - 3 + ((firstThursday.getDay()+6)%7)) / 7);
+      const key = `${{target.getFullYear()}}-Uke${{week}}`;
+      weekly[key] = (weekly[key] || 0) + 1;
+    }}
+  }});
+  const weeklyLabels = Object.keys(weekly).sort();
+  const weeklyData = weeklyLabels.map(k => weekly[k]);
+
+  // Fordeling på dokumenttyper
+  const types = {{}};
+  filtered.forEach(d => {{
+    const t = d.dokumenttype || "Ukjent";
+    types[t] = (types[t] || 0) + 1;
+  }});
+  const typeLabels = Object.keys(types).sort();
+  const typeData = typeLabels.map(k => types[k]);
+
+  // Render charts (destroy first if exists)
+  const weeklyCanvas = document.getElementById("chartWeekly");
+  const typesCanvas = document.getElementById("chartTypes");
+
+  if (weeklyChart) weeklyChart.destroy();
+  if (typesChart) typesChart.destroy();
+
+  weeklyChart = new Chart(weeklyCanvas, {{
+    type: 'bar',
+    data: {{
+      labels: weeklyLabels,
+      datasets: [{{
+        label: 'Publisert',
+        data: weeklyData,
+        backgroundColor: '#1f6feb'
+      }}]
+    }},
+    options: {{
+      responsive: true,
+      plugins: {{
+        legend: {{ display: false }}
+      }},
+      scales: {{
+        x: {{ ticks: {{ autoSkip: true, maxRotation: 0 }} }},
+        y: {{ beginAtZero: true, precision: 0 }}
+      }}
+    }}
+  }});
+
+  typesChart = new Chart(typesCanvas, {{
+    type: 'pie',
+    data: {{
+      labels: typeLabels,
+      datasets: [{{
+        data: typeData,
+        backgroundColor: ['#1f6feb','#b78103','#7d3fc2','#0ea5a5','#8b5e34','#14532d','#667085','#e11d48','#06b6d4','#22c55e']
+      }}]
+    }},
+    options: {{
+      responsive: true,
+      plugins: {{
+        legend: {{ position: 'bottom' }}
+      }}
+    }}
+  }});
+}
+
+// Init from URL params
 function applyParamsFromURL() {{
   const url = new URL(window.location.href);
   const q = url.searchParams.get("q") || "";
@@ -621,7 +652,7 @@ function applyParamsFromURL() {{
   currentSort = sort;
   perPage = pp;
   currentPage = pg;
-}}
+}
 
 document.addEventListener("DOMContentLoaded", () => {{
   applyParamsFromURL();
