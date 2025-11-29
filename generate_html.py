@@ -54,8 +54,16 @@ body {{
   color: var(--text);
   background: var(--bg);
 }}
+header.sticky-header {{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1000;
+  padding: 1rem 0;
+  border-bottom: 2px solid var(--border);
+}}
 header h1 {{ margin: 0 0 .25rem 0; }}
-header .updated {{ color: var(--muted); margin-bottom: 1rem; }}
+header .updated {{ color: var(--muted); margin-bottom: 0.5rem; }}
 
 .controls {{
   display: grid;
@@ -123,78 +131,82 @@ ul.files li {{ margin: .25rem 0; }}
   background: #fff;
 }}
 .summary {{ color: var(--muted); font-size: .95rem; }}
-hr {{ border: none; border-top: 1px solid var(--border); margin: 1rem 0; }}
 </style>
 </head>
 <body>
-<header>
+<header class="sticky-header">
   <h1>Postliste – Strand kommune</h1>
   <p class="updated">Oppdatert: {updated}</p>
-</header>
 
-<section class="controls" aria-label="Kontroller for filtrering, søk og sortering">
-  <div class="field">
-    <label for="searchInput">Søk (tittel, dokumentID, avsender/mottaker):</label>
-    <input id="searchInput" type="text" placeholder="Skriv for å søke …" oninput="applySearch()" />
-  </div>
-  <div class="field">
-    <label for="filterType">Filtrer på dokumenttype:</label>
-    <select id="filterType" onchange="applyFilter()">
-      <option value="">Alle</option>
-      <option value="Inngående">Inngående</option>
-      <option value="Utgående">Utgående</option>
-      <option value="Sakskart">Sakskart</option>
-      <option value="Møtebok">Møtebok</option>
-      <option value="Møteprotokoll">Møteprotokoll</option>
-      <option value="Saksfremlegg">Saksfremlegg</option>
-      <option value="Internt">Internt</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="sortSelect">Sorter:</label>
-    <select id="sortSelect" onchange="applySort()">
-      <option value="dato-desc">Dato (nyeste først)</option>
-      <option value="dato-asc">Dato (eldste først)</option>
-      <option value="type-asc">Dokumenttype (A–Å)</option>
-      <option value="type-desc">Dokumenttype (Å–A)</option>
-      <option value="status-publisert">Status (Publisert først)</option>
-      <option value="status-innsyn">Status (Må bes om innsyn først)</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="perPage">Oppføringer per side:</label>
-    <select id="perPage" onchange="changePerPage()">
-      <option value="5">5</option>
-      <option value="10">10</option>
-      <option value="20">20</option>
-      <option value="50" selected>50</option>
-    </select>
-  </div>
-  <div class="actions">
-    <button onclick="exportCSV()">Eksporter CSV</button>
-    <span class="summary" id="summary" aria-live="polite"></span>
-  </div>
-</section>
+  <section class="controls" aria-label="Kontroller for filtrering, søk og sortering">
+    <div class="field">
+      <label for="searchInput">Søk (tittel, dokumentID, avsender/mottaker):</label>
+      <input id="searchInput" type="text" placeholder="Skriv for å søke …" oninput="applySearch()" />
+    </div>
+    <div class="field">
+      <label for="filterType">Filtrer på dokumenttype:</label>
+      <select id="filterType" onchange="applyFilter()">
+        <option value="">Alle</option>
+        <option value="Inngående">Inngående</option>
+        <option value="Utgående">Utgående</option>
+        <option value="Sakskart">Sakskart</option>
+        <option value="Møtebok">Møtebok</option>
+        <option value="Møteprotokoll">Møteprotokoll</option>
+        <option value="Saksfremlegg">Saksfremlegg</option>
+        <option value="Internt">Internt</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="statusFilter">Filtrer på status:</label>
+      <select id="statusFilter" onchange="applyStatusFilter()">
+        <option value="">Alle</option>
+        <option value="Publisert">Publisert</option>
+        <option value="Må bes om innsyn">Må bes om innsyn</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sortSelect">Sorter:</label>
+      <select id="sortSelect" onchange="applySort()">
+        <option value="dato-desc">Dato (nyeste først)</option>
+        <option value="dato-asc">Dato (eldste først)</option>
+        <option value="type-asc">Dokumenttype (A–Å)</option>
+        <option value="type-desc">Dokumenttype (Å–A)</option>
+        <option value="status-publisert">Status (Publisert først)</option>
+        <option value="status-innsyn">Status (Må bes om innsyn først)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="perPage">Oppføringer per side:</label>
+      <select id="perPage" onchange="changePerPage()">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50" selected>50</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button onclick="exportCSV()">Eksporter CSV</button>
+      <span class="summary" id="summary" aria-live="polite"></span>
+    </div>
+  </section>
+</header>
 
 <nav id="pagination-top" class="pagination" aria-label="Paginering topp"></nav>
 <main id="container" class="container"></main>
 <nav id="pagination-bottom" class="pagination" aria-label="Paginering bunn"></nav>
 
 <script>
-// Data fra JSON
 const data = {json.dumps(data, ensure_ascii=False)};
-
-// Konfig
 let perPage = {per_page};
 let currentPage = 1;
 let currentFilter = "";
 let currentSearch = "";
+let currentStatus = "";
 let currentSort = "dato-desc";
 
-// Utils
 function escapeHtml(s) {{
   if (!s) return "";
-  return s.replace(/[&<>"]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}})[c]);
+  return s.replace(/[&<>"]/g, c => ({{"&":"&amp;","<":"&lt;","\\": "&quot;"}})[c]);
 }}
 
 function cssClassForType(doktype) {{
@@ -221,7 +233,7 @@ function iconForType(doktype) {{
   return "📄";
 }}
 
-// Hent dato for sortering: bruk parsed_date (ISO) hvis finnes, ellers d.dato (DD.MM.YYYY)
+// Dato for sortering: bruk parsed_date (ISO) hvis finnes, ellers DD.MM.YYYY
 function getDateForSort(d) {{
   const iso = d.parsed_date || "";
   if (iso) {{
@@ -239,10 +251,10 @@ function getDateForSort(d) {{
   return 0;
 }}
 
-// Filtrering + søk + sortering
 function getFilteredData() {{
   let arr = data.slice();
 
+  // Søk
   if (currentSearch) {{
     const q = currentSearch.toLowerCase();
     arr = arr.filter(d =>
@@ -252,10 +264,17 @@ function getFilteredData() {{
     );
   }}
 
+  // Dokumenttype
   if (currentFilter) {{
     arr = arr.filter(d => d.dokumenttype && d.dokumenttype.includes(currentFilter));
   }}
 
+  // Status
+  if (currentStatus) {{
+    arr = arr.filter(d => d.status === currentStatus);
+  }}
+
+  // Sortering
   arr.sort((a,b) => {{
     if (currentSort === "dato-desc") return getDateForSort(b) - getDateForSort(a);
     if (currentSort === "dato-asc") return getDateForSort(a) - getDateForSort(b);
@@ -274,12 +293,12 @@ function renderSummary(totalFiltered) {{
   const parts = [];
   if (currentSearch) parts.push(`søk: "${{currentSearch}}"`);
   if (currentFilter) parts.push(`filter: ${{currentFilter}}`);
+  if (currentStatus) parts.push(`status: ${{currentStatus}}`);
   const ctx = parts.length ? ` (${{parts.join(", ")}})` : "";
   document.getElementById("summary").textContent =
     `Viser ${{totalFiltered}} av ${{totalAll}}${{ctx}}`;
 }}
 
-// Render side
 function renderPage(page) {{
   const filtered = getFilteredData();
   const start = (page-1) * perPage;
@@ -292,14 +311,13 @@ function renderPage(page) {{
     const statusClass = d.status === "Publisert" ? "status-publisert" : "status-innsyn";
     const link = d.journal_link || d.detalj_link || "";
 
-    // Betinget visning av dokumenter
+    // Betinget visning av dokumenter og innsyn
     let filesHtml = "";
     if (d.status === "Publisert" && d.filer && d.filer.length) {{
       filesHtml = "<ul class='files'>" + d.filer.map(f => `
         <li><a href='${{f.url}}' target='_blank'>${{escapeHtml(f.tekst) || "Fil"}}</a></li>
       `).join("") + "</ul>";
     }} else if (link) {{
-      // Status != Publisert => vis "Be om innsyn"
       filesHtml = `<p><a href='${{link}}' target='_blank'>Be om innsyn</a></p>`;
     }}
 
@@ -354,6 +372,12 @@ function applyFilter() {{
   renderPage(currentPage);
 }}
 
+function applyStatusFilter() {{
+  currentStatus = document.getElementById("statusFilter").value;
+  currentPage = 1;
+  renderPage(currentPage);
+}}
+
 function applySearch() {{
   currentSearch = document.getElementById("searchInput").value.trim();
   currentPage = 1;
@@ -400,7 +424,6 @@ function exportCSV() {{
 }}
 
 document.addEventListener("DOMContentLoaded", () => {{
-  // Sett default perPage fra config
   const perPageSelect = document.getElementById("perPage");
   if (perPageSelect) {{
     const opt = Array.from(perPageSelect.options).find(o => parseInt(o.value,10) === perPage);
