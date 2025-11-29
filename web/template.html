@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<title>Postliste – Strand kommune</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="sticky-header">
+  <h1>Postliste – Strand kommune</h1>
+  <p class="updated">Oppdatert: {updated}</p>
+  <!-- kontroller-seksjon -->
+</header>
+
+<section id="stats">
+  <h2>📈 Statistikk</h2>
+  <div class="stats-container">
+    <div><h3>Publisert per uke</h3><canvas id="chartWeekly"></canvas></div>
+    <div><h3>Fordeling på dokumenttyper</h3><canvas id="chartTypes"></canvas></div>
+  </div>
+</section>
+
+<nav id="pagination-top" class="pagination"></nav>
+<main id="container" class="container"></main>
+<nav id="pagination-bottom" class="pagination"></nav>
+
+<script>
+const data = {data_json};
+let perPage = {per_page};
+</script>
+<script src="script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>
