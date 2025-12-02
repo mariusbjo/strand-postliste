@@ -11,6 +11,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
 
       - name: Sett opp Python
         uses: actions/setup-python@v4
@@ -40,6 +42,7 @@ jobs:
           message: "Scrape 2006 H1"
           push: true
           pull: true
+          branch: main
 
   scrape_2006_H2:
     runs-on: ubuntu-latest
@@ -49,6 +52,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
 
       - name: Sett opp Python
         uses: actions/setup-python@v4
@@ -78,3 +83,4 @@ jobs:
           message: "Scrape 2006 H2"
           push: true
           pull: true
+          branch: main
