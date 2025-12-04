@@ -5,13 +5,12 @@ from playwright.sync_api import sync_playwright
 DATA_FILE = "postliste.json"
 CONFIG_FILE = "config.json"
 BASE_URL = "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/"
-PAGE_SIZE = 100
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {}
+    raise FileNotFoundError(f"{CONFIG_FILE} mangler – opprett filen med nødvendige innstillinger.")
 
 def load_existing():
     if os.path.exists(DATA_FILE):
@@ -47,9 +46,7 @@ def parse_dato_str(s):
         return None
 
 def format_dato_ddmmYYYY(d):
-    if not d:
-        return ""
-    return d.strftime("%d.%m.%Y")
+    return d.strftime("%d.%m.%Y") if d else ""
 
 def hent_side(url, browser):
     page = browser.new_page()
@@ -73,7 +70,6 @@ def hent_side(url, browser):
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
         am = f"Avsender: {avsender}" if avsender else (f"Mottaker: {mottaker}" if mottaker else "")
 
-        # Finn detaljlenke som i scraper.py
         detalj_link = ""
         try:
             link_elem = art.evaluate_handle("node => node.closest('a')")
@@ -147,17 +143,17 @@ def main(start_date=None, end_date=None):
     print("[INFO] Starter scraper_dates…")
     all_docs = []
     cfg = load_config()
-    start_page = int(cfg.get("start_page", 1))
-    max_pages = int(cfg.get("max_pages", 100))
+    max_pages = int(cfg.get("max_pages_full", 200))
+    per_page = int(cfg.get("per_page", 100))
 
-    print(f"[INFO] Konfigurasjon: start_page={start_page}, max_pages={max_pages}")
+    print(f"[INFO] Konfigurasjon fra config.json: max_pages_full={max_pages}, per_page={per_page}")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-        page_num = start_page
+        page_num = 1
         while page_num <= max_pages:
             print(f"[INFO] Henter side {page_num} …")
-            url = f"{BASE_URL}?page={page_num}&pageSize={PAGE_SIZE}"
+            url = f"{BASE_URL}?page={page_num}&pageSize={per_page}"
             docs = hent_side(url, browser)
             if not docs:
                 break
@@ -181,7 +177,6 @@ if __name__ == "__main__":
         start_date = datetime.strptime(args[0], "%Y-%m-%d").date()
     if len(args) >= 2 and args[1]:
         end_date = datetime.strptime(args[1], "%Y-%m-%d").date()
-    # Hvis bare én dato er gitt, bruk den som både start og slutt
     if start_date and not end_date:
         end_date = start_date
     main(start_date=start_date, end_date=end_date)
