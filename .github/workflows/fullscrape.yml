@@ -41,11 +41,12 @@ jobs:
           add: "archive/postliste_2006_H1.json config.json"
           message: "Scrape 2006 H1"
           push: true
+          pull: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   scrape_2006_H2:
     runs-on: ubuntu-latest
-    needs: scrape_2006_H1
+    needs: scrape_2006_H1   # <- H2 starter først når H1 er ferdig
     steps:
       - name: Sjekk ut repo
         uses: actions/checkout@v3
@@ -81,4 +82,5 @@ jobs:
           add: "archive/postliste_2006_H2.json config.json"
           message: "Scrape 2006 H2"
           push: true
+          pull: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
