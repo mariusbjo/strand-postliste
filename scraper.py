@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright
-import json, os
+import json, os, time
 from datetime import datetime
 
 CONFIG_FILE = "config.json"
@@ -42,8 +42,9 @@ def hent_side(page_num, browser):
     print(f"[INFO] Åpner side {page_num}")
     page = browser.new_page()
     try:
-        page.goto(url, timeout=15000)
-        page.wait_for_selector("article.bc-content-teaser--item", timeout=5000)
+        page.goto(url, timeout=60000, wait_until="domcontentloaded")
+        time.sleep(2)  # pause etter sidelasting
+        page.wait_for_selector("article.bc-content-teaser--item", timeout=10000)
     except:
         page.close()
         return []
@@ -69,7 +70,8 @@ def hent_side(page_num, browser):
         if detalj_link:
             dp = browser.new_page()
             try:
-                dp.goto(detalj_link, timeout=15000)
+                dp.goto(detalj_link, timeout=60000, wait_until="domcontentloaded")
+                time.sleep(2)  # pause etter detaljside
                 for fl in dp.query_selector_all("a"):
                     href, tekst = fl.get_attribute("href"), fl.inner_text()
                     if href and "/api/presentation/v2/nye-innsyn/filer" in href:
