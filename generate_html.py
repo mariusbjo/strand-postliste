@@ -4,18 +4,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 DATA_FILE = "data/postliste.json"
-CONFIG_FILE = "config.json"
 OUTPUT_FILE = "web/index.html"
 TEMPLATE_FILE = "web/template.html"
 
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except Exception:
-                pass
-    return {"per_page": 50}
+# Fastsett antall oppføringer per side (default 50)
+PER_PAGE = 50
 
 def load_data():
     if not os.path.exists(DATA_FILE):
@@ -28,8 +21,6 @@ def load_data():
 
 def generate_html():
     data = load_data()
-    config = load_config()
-    per_page = int(config.get("per_page", 50))
     updated = datetime.now(ZoneInfo("Europe/Oslo")).strftime("%d.%m.%Y %H:%M")
 
     # Les template.html
@@ -39,7 +30,7 @@ def generate_html():
     # Sett inn variabler
     html = template.format(
         updated=updated,
-        per_page=per_page,
+        per_page=PER_PAGE,
         data_json=json.dumps(data, ensure_ascii=False)
     )
 
