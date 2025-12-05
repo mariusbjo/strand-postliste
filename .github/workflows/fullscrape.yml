@@ -1,4 +1,4 @@
-name: Full historical scrape 2007 (halvår)
+name: Full historical scrape
 
 on:
   workflow_dispatch:
