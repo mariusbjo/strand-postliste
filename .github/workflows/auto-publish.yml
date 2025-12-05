@@ -5,6 +5,7 @@ on:
     workflows: ["Morgen-scraping", "Oppdatering-scraping", "Full historical scrape"]
     types:
       - completed
+  workflow_dispatch:   # gir deg manuell trigger i Actions-fanen
 
 jobs:
   publish:
