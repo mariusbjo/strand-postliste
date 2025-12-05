@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Sjekk ut repo
         uses: actions/checkout@v3
+        with:
+          ref: gh-pages   # sjekk ut gh-pages branch
 
       - name: Sett opp Python
         uses: actions/setup-python@v4
@@ -31,6 +33,6 @@ jobs:
       - name: Commit og push oppdateringer
         uses: EndBug/add-and-commit@v9
         with:
-          add: "postliste.json index.html"
+          add: "index.html postliste.json"
           message: "Automatisk publish etter scraping"
           push: true
