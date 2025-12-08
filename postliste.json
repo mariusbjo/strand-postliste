@@ -8203,8 +8203,13 @@
     "avsender_mottaker": "Avsender: Rogaland fylkeskommune",
     "side": 1,
     "detalj_link": "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/details/a-6965376f__8677__47ea__a757__23e14c179149-2020016215!8nE1bJ/d-6965376f__8677__47ea__a757__23e14c179149-2020249031!sF61Yk",
-    "filer": [],
-    "status": "Må bes om innsyn"
+    "filer": [
+      {
+        "tekst": "Kvittering på innsendt søknad om tilskudd til Resahaugen aktivitetspark - Bordtennis og teqball ved Resahaugen skole (pdf, 209KB)",
+        "url": "https://www.strand.kommune.no/api/presentation/v2/nye-innsyn/filer/v-6965376f__8677__47ea__a757__23e14c179149-1217647_1_A!d-2020249031!MU8BnY?pid=29"
+      }
+    ],
+    "status": "Publisert"
   },
   {
     "tittel": "45/53 Forespørsel om status i sak",
@@ -8465,29 +8470,8 @@
     "avsender_mottaker": "",
     "side": 1,
     "detalj_link": "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/details/a-6965376f__8677__47ea__a757__23e14c179149-2020018677!GVtML6/d-6965376f__8677__47ea__a757__23e14c179149-2020249096!3ME1MD",
-    "filer": [
-      {
-        "tekst": "Høringsuttalelse - Regionalplan for natur- og klimaomstilling i Rogaland 2026-2050 (pdf, 126KB)",
-        "url": "https://www.strand.kommune.no/api/presentation/v2/nye-innsyn/filer/v-6965376f__8677__47ea__a757__23e14c179149-1217892_10_P!d-2020249096!0smrMh?pid=29"
-      },
-      {
-        "tekst": "Høringsbrev - Høring av Regionalplan for natur og klimaomstilling i Rogaland 2026-2050 (pdf, 143KB)",
-        "url": "https://www.strand.kommune.no/api/presentation/v2/nye-innsyn/filer/v-6965376f__8677__47ea__a757__23e14c179149-1217894_1_A!d-2020249096!iH2KHD?pid=29"
-      },
-      {
-        "tekst": "Regionalplan for natur og klimaomstilling i Rogaland 2026-2050.pdf (pdf, 32,9MB)",
-        "url": "https://www.strand.kommune.no/api/presentation/v2/nye-innsyn/filer/v-6965376f__8677__47ea__a757__23e14c179149-1217895_1_A!d-2020249096!NoZVsN?pid=29"
-      },
-      {
-        "tekst": "Handlingsprogram 2026-2030 til Regionalplan for natur og klimaomstilling.pdf (pdf, 6MB)",
-        "url": "https://www.strand.kommune.no/api/presentation/v2/nye-innsyn/filer/v-6965376f__8677__47ea__a757__23e14c179149-1217896_1_A!d-2020249096!5OkhEB?pid=29"
-      },
-      {
-        "tekst": "Høringsinnspill til Regionalplan for natur og klimaomstilling i Rogaland 2026-2050 (pdf, 156KB)",
-        "url": "https://www.strand.kommune.no/api/presentation/v2/nye-innsyn/filer/v-6965376f__8677__47ea__a757__23e14c179149-1217897_1_A!d-2020249096!73Wloq?pid=29"
-      }
-    ],
-    "status": "Publisert"
+    "filer": [],
+    "status": "Må bes om innsyn"
   },
   {
     "tittel": "47/581 Dokumentsjekk - ikke behov for mangelbrev",
