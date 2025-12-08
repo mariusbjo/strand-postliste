@@ -12,6 +12,66 @@
     <p class="updated">Oppdatert: {updated}</p>
   </header>
 
+  <!-- Filterseksjon -->
+  <section id="filters" class="filters">
+    <!-- Søk i tittel/dokumentID -->
+    <input type="text" id="searchInput" placeholder="Søk i tittel eller dokumentID..." oninput="applySearch()" />
+
+    <!-- Søk i avsender/mottaker -->
+    <input type="text" id="searchAM" placeholder="Søk i avsender/mottaker..." oninput="applySearch()" />
+
+    <!-- Dato-intervall -->
+    <label for="dateFrom">Fra:</label>
+    <input type="date" id="dateFrom" onchange="applyDateFilter()" />
+    <label for="dateTo">Til:</label>
+    <input type="date" id="dateTo" onchange="applyDateFilter()" />
+
+    <!-- Hurtigvalg dato -->
+    <button onclick="setQuickRange('week')">Siste uke</button>
+    <button onclick="setQuickRange('month')">Siste måned</button>
+
+    <!-- Dokumenttype -->
+    <select id="filterType" onchange="applyFilter()">
+      <option value="">Alle dokumenttyper</option>
+      <option value="Inngående">Inngående</option>
+      <option value="Utgående">Utgående</option>
+      <option value="Sakskart">Sakskart</option>
+      <option value="Møtebok">Møtebok</option>
+      <option value="Møteprotokoll">Møteprotokoll</option>
+      <option value="Saksfremlegg">Saksfremlegg</option>
+      <option value="Internt">Internt</option>
+    </select>
+
+    <!-- Status -->
+    <select id="statusFilter" onchange="applyStatusFilter()">
+      <option value="">Alle statuser</option>
+      <option value="Publisert">Publisert</option>
+      <option value="Må bes om innsyn">Må bes om innsyn</option>
+    </select>
+
+    <!-- Sortering -->
+    <select id="sortSelect" onchange="applySort()">
+      <option value="dato-desc">Dato nyeste først</option>
+      <option value="dato-asc">Dato eldste først</option>
+      <option value="type-asc">Type A–Å</option>
+      <option value="type-desc">Type Å–A</option>
+      <option value="status-publisert">Publisert først</option>
+      <option value="status-innsyn">Innsyn først</option>
+    </select>
+
+    <!-- Antall per side -->
+    <select id="perPage" onchange="changePerPage()">
+      <option value="25">25 per side</option>
+      <option value="50">50 per side</option>
+      <option value="100">100 per side</option>
+      <option value="3000">Vis alle</option>
+    </select>
+  </section>
+
+  <!-- Sammendragstekst -->
+  <p id="summary"></p>
+
+  <!-- Statistikkseksjon -->
   <section id="stats">
     <h2>📈 Statistikk</h2>
     <div class="stats-container">
@@ -20,14 +80,18 @@
     </div>
   </section>
 
+  <!-- Paginering og innhold -->
   <nav id="pagination-top" class="pagination"></nav>
   <main id="container" class="container"></main>
   <nav id="pagination-bottom" class="pagination"></nav>
 
+  <!-- Data og konfig settes inn av generate_html.py -->
   <script>
     const data = {data_json};
     let perPage = {per_page};
   </script>
+
+  <!-- Eksterne script -->
   <script src="web/script.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
