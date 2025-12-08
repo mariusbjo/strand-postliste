@@ -5,30 +5,6 @@
   <title>Postliste – Strand kommune</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="web/style.css">
-  <style>
-    /* Enkel tab-stil som matcher eksisterende CSS */
-    .tabs {
-      display: flex;
-      gap: 1rem;
-      border-bottom: 2px solid var(--border);
-      margin: 1rem 0;
-    }
-    .tabs button {
-      background: none;
-      border: none;
-      padding: .5rem 1rem;
-      font-size: 1rem;
-      cursor: pointer;
-      color: var(--text);
-    }
-    .tabs button.active {
-      border-bottom: 3px solid var(--link);
-      font-weight: 600;
-      color: var(--link);
-    }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-  </style>
 </head>
 <body>
   <header class="sticky-header">
@@ -40,12 +16,10 @@
   <nav class="tabs">
     <button class="active" data-tab="postliste">📂 Postliste</button>
     <button data-tab="stats">📈 Statistikk</button>
-    <!-- Her kan du legge til flere faner senere -->
   </nav>
 
-  <!-- Sammendrag og filterseksjon -->
+  <!-- Filterseksjon -->
   <section class="controls">
-    <!-- (samme filterfelter som vi satte opp tidligere) -->
     <div class="field">
       <label for="searchInput">Søk i tittel/dokumentID</label>
       <input type="text" id="searchInput" placeholder="Søk..." oninput="applySearch()" />
@@ -54,8 +28,64 @@
       <label for="searchAM">Avsender/Mottaker</label>
       <input type="text" id="searchAM" placeholder="Søk..." oninput="applySearch()" />
     </div>
-    <!-- ... resten av filterfeltene ... -->
+    <div class="field">
+      <label for="dateFrom">Fra dato</label>
+      <input type="date" id="dateFrom" onchange="applyDateFilter()" />
+    </div>
+    <div class="field">
+      <label for="dateTo">Til dato</label>
+      <input type="date" id="dateTo" onchange="applyDateFilter()" />
+    </div>
+    <div class="actions">
+      <div class="quick">
+        <button onclick="setQuickRange('week')">Siste uke</button>
+        <button onclick="setQuickRange('month')">Siste måned</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="filterType">Dokumenttype</label>
+      <select id="filterType" onchange="applyFilter()">
+        <option value="">Alle</option>
+        <option value="Inngående">Inngående</option>
+        <option value="Utgående">Utgående</option>
+        <option value="Sakskart">Sakskart</option>
+        <option value="Møtebok">Møtebok</option>
+        <option value="Møteprotokoll">Møteprotokoll</option>
+        <option value="Saksfremlegg">Saksfremlegg</option>
+        <option value="Internt">Internt</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="statusFilter">Status</label>
+      <select id="statusFilter" onchange="applyStatusFilter()">
+        <option value="">Alle</option>
+        <option value="Publisert">Publisert</option>
+        <option value="Må bes om innsyn">Må bes om innsyn</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sortSelect">Sortering</label>
+      <select id="sortSelect" onchange="applySort()">
+        <option value="dato-desc">Dato nyeste først</option>
+        <option value="dato-asc">Dato eldste først</option>
+        <option value="type-asc">Type A–Å</option>
+        <option value="type-desc">Type Å–A</option>
+        <option value="status-publisert">Publisert først</option>
+        <option value="status-innsyn">Innsyn først</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="perPage">Per side</label>
+      <select id="perPage" onchange="changePerPage()">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="3000">Alle</option>
+      </select>
+    </div>
   </section>
+
+  <!-- Sammendragstekst -->
   <p class="summary" id="summary"></p>
 
   <!-- Tab-innhold: Postliste -->
@@ -74,12 +104,15 @@
     </div>
   </section>
 
+  <!-- Dark mode toggle -->
+  <button class="toggle-dark" id="darkToggle">🌙 Dark mode</button>
+
   <!-- Data og konfig -->
   <script>
     const data = {data_json};
     let perPage = {per_page};
 
-    // Enkel tab-switching
+    // Tab-switching
     document.addEventListener("DOMContentLoaded", () => {
       const tabs = document.querySelectorAll(".tabs button");
       const contents = document.querySelectorAll(".tab-content");
@@ -92,6 +125,15 @@
           contents.forEach(c => c.classList.remove("active"));
           document.getElementById("tab-" + tab.dataset.tab).classList.add("active");
         });
+      });
+
+      // Dark mode toggle
+      const toggle = document.getElementById("darkToggle");
+      toggle.addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        toggle.textContent = document.body.classList.contains("dark")
+          ? "☀️ Light mode"
+          : "🌙 Dark mode";
       });
     });
   </script>
