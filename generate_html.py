@@ -3,8 +3,8 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-DATA_FILE = "data/postliste.json"
-OUTPUT_FILE = "web/index.html"
+DATA_FILE = "postliste.json"
+OUTPUT_FILE = "index.html"
 TEMPLATE_FILE = "web/template.html"
 
 # Fastsett antall oppføringer per side (default 50)
