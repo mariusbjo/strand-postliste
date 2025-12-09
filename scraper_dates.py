@@ -33,19 +33,24 @@ def safe_text(el, sel):
         return ""
 
 def parse_dato_str(s):
+    """Prøver å tolke dato fra streng i ulike formater."""
     if not s:
         return None
-    for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
-        try:
-            return datetime.strptime(s, fmt).date()
-        except Exception:
-            continue
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except Exception:
+        pass
+    try:
+        return datetime.strptime(s, "%d.%m.%Y").date()
+    except Exception:
+        pass
     try:
         return datetime.fromisoformat(s[:10]).date()
     except Exception:
         return None
 
 def format_dato_ddmmYYYY(d):
+    """Formatterer datoobjekt til dd.mm.yyyy."""
     return d.strftime("%d.%m.%Y") if d else ""
 
 def hent_side(url, browser):
@@ -98,8 +103,8 @@ def hent_side(url, browser):
 
         docs.append({
             "tittel": tittel,
-            "dato": format_dato_ddmmYYYY(parsed_date) if parsed_date else dato_str,
-            "parsed_date": parsed_date.isoformat() if parsed_date else None,
+            "dato": format_dato_ddmmYYYY(parsed_date),   # alltid dd.mm.yyyy
+            "dato_iso": parsed_date.isoformat() if parsed_date else None,  # ISO lagres også
             "dokumentID": dokid,
             "dokumenttype": doktype,
             "avsender_mottaker": am,
@@ -121,11 +126,14 @@ def update_json(new_docs):
         if not old or changed_files or changed_core:
             updated[doc_id] = d
             print(f"[{'NEW' if not old else 'UPDATE'}] {doc_id} – {d['tittel']}")
+
     def sort_key(x):
+        # Sortering basert på norsk format dd.mm.yyyy
         try:
-            return datetime.fromisoformat(x.get("parsed_date")).date()
+            return datetime.strptime(x.get("dato"), "%d.%m.%Y").date()
         except Exception:
-            return parse_dato_str(x.get("dato")) or date.min
+            return date.min
+
     data_list = sorted(updated.values(), key=sort_key, reverse=True)
     save_json(data_list)
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
