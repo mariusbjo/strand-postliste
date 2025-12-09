@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import json, os, time
-from datetime import datetime
+from datetime import datetime, date
 
 CONFIG_FILE = "config.json"
 DATA_FILE = "postliste.json"
@@ -28,14 +28,21 @@ def safe_text(el, sel):
     except:
         return ""
 
-def format_dato(s):
-    """Prøv å parse dato i flere formater og returner ISO (YYYY-MM-DD)."""
+def parse_dato(s):
+    """Prøv å parse dato i flere formater og returner både norsk og ISO."""
+    if not s:
+        return None, None
     for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
         try:
-            return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
+            dt = datetime.strptime(s, fmt).date()
+            return dt.strftime("%d.%m.%Y"), dt.strftime("%Y-%m-%d")
         except:
             continue
-    return s  # returner original hvis parsing feiler
+    try:
+        dt = datetime.fromisoformat(s[:10]).date()
+        return dt.strftime("%d.%m.%Y"), dt.strftime("%Y-%m-%d")
+    except:
+        return None, None
 
 def hent_side(page_num, browser):
     url = BASE_URL.format(page=page_num)
@@ -55,7 +62,7 @@ def hent_side(page_num, browser):
             continue
         tittel = safe_text(art, ".bc-content-teaser-title-text")
         dato_raw = safe_text(art, ".bc-content-teaser-meta-property--dato dd")
-        dato = format_dato(dato_raw)
+        dato_norsk, dato_iso = parse_dato(dato_raw)
         doktype = safe_text(art, ".SakListItem_sakListItemTypeText__16759c")
         avsender = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
@@ -76,13 +83,14 @@ def hent_side(page_num, browser):
                     href, tekst = fl.get_attribute("href"), fl.inner_text()
                     if href and "/api/presentation/v2/nye-innsyn/filer" in href:
                         abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
-                        filer.append({"tekst": tekst, "url": abs_url})
+                        filer.append({"tekst": tekst.strip(), "url": abs_url})
             finally:
                 dp.close()
         status = "Publisert" if filer else "Må bes om innsyn"
         docs.append({
             "tittel": tittel,
-            "dato": dato,
+            "dato": dato_norsk or "",       # alltid dd.mm.yyyy for visning
+            "dato_iso": dato_iso or None,   # ISO lagres som backup
             "dokumentID": dokid,
             "dokumenttype": doktype,
             "avsender_mottaker": am,
@@ -115,14 +123,19 @@ def main():
                     updated[doc_id] = d
                     print(f"[{'NEW' if not old else 'UPDATE'}] {doc_id} – {d['tittel']}")
             if mode == "incremental":
-                # Stopp først når ALLE dokumentene på siden er kjente
                 if all(d["dokumentID"] in existing for d in docs):
                     print("[INFO] Incremental: Stoppet – alle oppføringer på denne siden er kjente.")
                     break
         browser.close()
 
-    # Sorter på ISO-dato
-    data_list = sorted(updated.values(), key=lambda x: x.get("dato", ""), reverse=True)
+    # Sorter på norsk dato dd.mm.yyyy
+    def sort_key(x):
+        try:
+            return datetime.strptime(x.get("dato"), "%d.%m.%Y").date()
+        except Exception:
+            return date.min
+
+    data_list = sorted(updated.values(), key=sort_key, reverse=True)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data_list, f, ensure_ascii=False, indent=2)
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
