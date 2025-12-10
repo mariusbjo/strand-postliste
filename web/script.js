@@ -5,6 +5,7 @@
 let currentPage = 1;
 let currentFilter = "";
 let currentSearch = "";
+let currentSearchAM = "";
 let currentStatus = "";
 let currentSort = "dato-desc";
 let dateFrom = "";
@@ -54,6 +55,7 @@ function getDateForSort(d) {
 
 function applySearch() {
   currentSearch = document.getElementById("searchInput").value.trim();
+  currentSearchAM = document.getElementById("searchAM").value.trim();
   currentPage = 1;
   renderPage(currentPage);
 }
@@ -115,6 +117,11 @@ function getFilteredData() {
     );
   }
 
+  if (currentSearchAM) {
+    const q = currentSearchAM.toLowerCase();
+    arr = arr.filter(d => (d.avsender_mottaker && d.avsender_mottaker.toLowerCase().includes(q)));
+  }
+
   if (currentFilter) {
     arr = arr.filter(d => d.dokumenttype && d.dokumenttype.includes(currentFilter));
   }
@@ -154,6 +161,7 @@ function renderSummary(totalFiltered) {
   // Sammendragstekst med aktive filtre
   const parts = [];
   if (currentSearch) parts.push(`søk: "${currentSearch}"`);
+  if (currentSearchAM) parts.push(`avsender/mottaker: "${currentSearchAM}"`);
   if (currentFilter) parts.push(`type: ${currentFilter}`);
   if (currentStatus) parts.push(`status: ${currentStatus}`);
   if (dateFrom || dateTo) parts.push(`dato: ${dateFrom || "–"} til ${dateTo || "–"}`);
@@ -184,6 +192,7 @@ function renderPage(page) {
       filesHtml = `<p><a href='${link}' target='_blank'>Be om innsyn</a></p>`;
     }
 
+    const am = d.avsender_mottaker ? escapeHtml(d.avsender_mottaker) + " – " : "";
     const datoVis = escapeHtml(d.dato);
 
     return `
@@ -231,7 +240,7 @@ function nextPage() {
 
 function exportCSV() {
   const filtered = getFilteredData();
-  const rows = [["Dato","DokumentID","Tittel","Dokumenttype","Status","Journalpostlenke"]];
+  const rows = [["Dato","DokumentID","Tittel","Dokumenttype","Avsender/Mottaker","Status","Journalpostlenke"]];
   filtered.forEach(d => {
     const link = d.journal_link || d.detalj_link || "";
     rows.push([
@@ -239,6 +248,7 @@ function exportCSV() {
       String(d.dokumentID || ""),
       (d.tittel || "").replace(/\s+/g, " ").trim(),
       d.dokumenttype || "",
+      d.avsender_mottaker || "",
       d.status || "",
       link
     ]);
@@ -262,6 +272,7 @@ function exportPDF() {
 function copyShareLink() {
   const params = new URLSearchParams();
   if (currentSearch) params.set("q", currentSearch);
+  if (currentSearchAM) params.set("am", currentSearchAM);
   if (currentFilter) params.set("type", currentFilter);
   if (currentStatus) params.set("status", currentStatus);
   if (dateFrom) params.set("from", dateFrom);
@@ -356,13 +367,17 @@ function buildStats(filtered) {
 function applyParamsFromURL() {
   const url = new URL(window.location.href);
   const q = url.searchParams.get("q") || "";
+  const am = url.searchParams.get("am") || "";
   const type = url.searchParams.get("type") || "";
   const status = url.searchParams.get("status") || "";
+  const from = url.searchParams.get("from") || "";
+  const to = url.searchParams.get("to") || "";
   const sort = url.searchParams.get("sort") || "dato-desc";
   const pp = parseInt(url.searchParams.get("perPage") || String(perPage), 10);
   const pg = parseInt(url.searchParams.get("page") || "1", 10);
 
   document.getElementById("searchInput").value = q;
+  document.getElementById("searchAM").value = am;
   document.getElementById("filterType").value = type;
   document.getElementById("statusFilter").value = status;
   document.getElementById("dateFrom").value = from;
@@ -374,6 +389,7 @@ function applyParamsFromURL() {
   if (opt) perPageSelect.value = String(pp);
 
   currentSearch = q;
+  currentSearchAM = am;
   currentFilter = type;
   currentStatus = status;
   dateFrom = from;
