@@ -31,6 +31,7 @@ jobs:
 
       - name: Kjør scraper (update)
         run: python scraper.py
+
       #Commiter kun til postliste.json og changes.json, egen workflow genererer frontend
       - name: Commit og push oppdateringer
         uses: EndBug/add-and-commit@v9
