@@ -2,7 +2,7 @@ name: Morgen-scraping
 
 on:
   schedule:
-    # Kjør hver morgen kl 06:00
+    # Kjør hver dag kl 06:00 UTC (≈ 07:00 norsk tid vinter)
     - cron: "0 6 * * *"
   workflow_dispatch:
 
