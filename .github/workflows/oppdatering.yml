@@ -31,13 +31,10 @@ jobs:
 
       - name: Kjør scraper (update)
         run: python scraper.py
-
-      - name: Generer HTML fra JSON
-        run: python generate_html.py
-
+      #Commiter kun til postliste.json og changes.json, egen workflow genererer frontend
       - name: Commit og push oppdateringer
         uses: EndBug/add-and-commit@v9
         with:
-          add: "index.html web/script.js web/style.css web/template.html postliste.json changes.json"
+          add: "postliste.json changes.json"
           message: "Automatisk oppdatering av eksisterende oppføringer (update)"
           push: true
