@@ -32,12 +32,9 @@ jobs:
       - name: Kjør scraper (incremental)
         run: python scraper.py
 
-      - name: Generer HTML fra JSON
-        run: python generate_html.py
-
       - name: Commit og push oppdateringer
         uses: EndBug/add-and-commit@v9
         with:
-          add: "index.html web/script.js web/style.css web/template.html postliste.json"
+          add: "postliste.json"
           message: "Automatisk morgenoppdatering (incremental)"
           push: true
