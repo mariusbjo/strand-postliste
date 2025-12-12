@@ -13,7 +13,7 @@ import './java/stats.js';
 
 // Init fra URL params og første render
 document.addEventListener("DOMContentLoaded", () => {
-  applyParamsFromURL();
+  // applyParamsFromURL(); // fjernet
   renderPage(currentPage);
 });
 
