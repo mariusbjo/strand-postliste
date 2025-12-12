@@ -1,3 +1,29 @@
+// Entry point for å hente inn modulene fra web/java/
+// Alle gamle funksjoner er kommentert ut som backup
+
+// === Import av modulene ===
+// Hvis du bruker ES6-moduler (anbefalt), kan du importere slik:
+// NB: Husk å legge til type="module" på <script> i HTML
+
+import './java/filters.js';
+import './java/render.js';
+import './java/pagination.js';
+import './java/export.js';
+import './java/stats.js';
+
+// Init fra URL params og første render
+document.addEventListener("DOMContentLoaded", () => {
+  applyParamsFromURL();
+  renderPage(currentPage);
+});
+
+/* ===========================
+   Backup av gammel script.js
+   ===========================
+
+// Hele gamle script.js-koden kan ligge her kommentert ut.
+// Da har du en trygg fallback hvis noe går galt med modulene.
+
 // Variabler settes inn fra generate_html.py via template.html
 // const data = {data_json};
 // let perPage = {per_page};
@@ -413,3 +439,4 @@ document.addEventListener("DOMContentLoaded", () => {
   applyParamsFromURL();
   renderPage(currentPage);
 });
+*/
