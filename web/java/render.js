@@ -1,6 +1,5 @@
 export function renderPage(page) {
   // Global state
-let currentPage = 1;
 let currentSearch = "";
 let currentFilter = "";
 let currentStatus = "";
