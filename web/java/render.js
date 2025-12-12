@@ -1,3 +1,12 @@
+// Global state
+let currentPage = 1;
+let currentSearch = "";
+let currentFilter = "";
+let currentStatus = "";
+let dateFrom = null;
+let dateTo = null;
+let currentSort = "dato-desc";
+
 // Hjelpefunksjoner og rendering av oppføringer
 
 function escapeHtml(s) {
