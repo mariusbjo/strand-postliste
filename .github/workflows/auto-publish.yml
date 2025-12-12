@@ -27,12 +27,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
 
-      - name: Generer HTML fra postliste.json
+      - name: Generer index.html fra template og data
         run: python generate_html.py
 
       - name: Commit og push frontend
         uses: EndBug/add-and-commit@v9
         with:
-          add: "index.html generate_html.py web/script.js web/style.css web/template.html postliste.json"
+          add: "index.html web/script.js web/style.css web/template.html postliste.json"
           message: "Automatisk publish etter scraping"
           push: true
