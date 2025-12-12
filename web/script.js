@@ -6,7 +6,7 @@
 // NB: Husk å legge til type="module" på <script> i HTML
 
 import './java/filters.js';
-import './java/render.js';
+import { renderPage } from './java/render.js';
 import './java/pagination.js';
 import './java/export.js';
 import './java/stats.js';
