@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
    For å rulle tilbake:
    1. Fjern importene øverst.
-   2. Fjern denne kommentaren (/* ... */).
+   2. Fjern denne kommentaren
    3. Lagre og push.
 
    Da kjører du igjen på den gamle monolittiske script.js.
