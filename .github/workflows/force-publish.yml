@@ -1,7 +1,10 @@
 name: Force publish
 
 on:
-  workflow_dispatch:   # manuell trigger i Actions-fanen
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   publish:
@@ -10,7 +13,7 @@ jobs:
       - name: Sjekk ut repo
         uses: actions/checkout@v3
         with:
-          ref: main   # eller gh-pages, avhengig av hva Pages er satt til
+          ref: main   # endre til gh-pages hvis Pages bygger derfra
 
       - name: Sett opp Python
         uses: actions/setup-python@v4
@@ -23,12 +26,12 @@ jobs:
           pip install playwright
           playwright install chromium
 
-      - name: Generer HTML fra postliste.json
+      - name: Generer index.html fra template og data
         run: python generate_html.py
 
       - name: Commit og push oppdateringer
         uses: EndBug/add-and-commit@v9
         with:
-          add: "index.html generate_html.py web/script.js web/style.css web/template.html postliste.json"
-          message: "Force publish frontend med postliste.json"
+          add: "index.html web/script.js web/style.css web/template.html postliste.json"
+          message: "Force publish med oppdatert index.html og postliste.json"
           push: true
