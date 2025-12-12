@@ -13,9 +13,18 @@ import './java/stats.js';
 
 // Init fra URL params og første render
 document.addEventListener("DOMContentLoaded", () => {
-  // applyParamsFromURL(); // fjernet
+  applyParamsFromURL();
   renderPage(currentPage);
 });
+
+function applyParamsFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const page = parseInt(params.get("page"), 10);
+  if (!isNaN(page)) {
+    currentPage = page;
+  }
+}
+
 
 /* ===========================
    Backup av gammel script.js
