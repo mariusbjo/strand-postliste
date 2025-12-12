@@ -1,18 +1,16 @@
-export function renderPage(page) {
-  // Global state
-let currentSearch = "";
-let currentFilter = "";
-let currentStatus = "";
-let dateFrom = null;
-let dateTo = null;
-let currentSort = "dato-desc";
+// === Global state ===
+export let currentSearch = "";
+export let currentFilter = "";
+export let currentStatus = "";
+export let dateFrom = null;
+export let dateTo = null;
+export let currentSort = "dato-desc";
 
-// Hjelpefunksjoner og rendering av oppføringer
-
+// === Hjelpefunksjoner ===
 function escapeHtml(s) {
   if (!s) return "";
   return s.replace(/[&<>"]/g, c => (
-    {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]
+    {"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;"}[c]
   ));
 }
 
@@ -53,6 +51,7 @@ function getDateForSort(d) {
   return dt ? dt.getTime() : 0;
 }
 
+// === Filtrering og sortering ===
 function getFilteredData() {
   let arr = data.slice();
 
@@ -97,6 +96,7 @@ function getFilteredData() {
   return arr;
 }
 
+// === Sammendrag ===
 function renderSummary(totalFiltered) {
   const totalAll = data.length;
   const parts = [];
@@ -110,7 +110,8 @@ function renderSummary(totalFiltered) {
   if (el) el.textContent = `Viser ${totalFiltered} av ${totalAll}${ctx}`;
 }
 
-function renderPage(page) {
+// === Rendering av kort og paginering ===
+export function renderPage(page) {
   const filtered = getFilteredData();
   const start = (page - 1) * perPage;
   const end = start + perPage;
@@ -154,5 +155,4 @@ function renderPage(page) {
   renderPagination("pagination-bottom", page, filtered.length);
   renderSummary(filtered.length);
   buildStats(filtered);
-}
 }
