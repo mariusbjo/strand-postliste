@@ -42,3 +42,4 @@ jobs:
           add: "postliste.json changes.json"
           message: "Automatisk morgenoppdatering (incremental)"
           push: true
+          pull: true
