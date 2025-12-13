@@ -1,12 +1,13 @@
+// === Global state for filtere ===
 let currentFilter = "";
 let currentSearch = "";
 let currentStatus = "";
 let currentSort = "dato-desc";
 let dateFrom = "";
 let dateTo = "";
-let perPage = 25; // default, kan overstyres av dropdown
 let currentPage = 1;
 
+// === Filterfunksjoner ===
 function applySearch() {
   const input = document.getElementById("searchInput");
   currentSearch = input ? input.value.trim() : "";
@@ -46,38 +47,35 @@ function applySort() {
 
 function changePerPage() {
   const el = document.getElementById("perPage");
-  perPage = el ? parseInt(el.value, 10) : perPage;
+  if (el && el.value) {
+    const newVal = parseInt(el.value, 10);
+    if (!isNaN(newVal)) {
+      perPage = newVal; // perPage er definert i template.html
+    }
+  }
   currentPage = 1;
   renderPage(currentPage);
 }
 
-// Koble alle filterfelter til event listeners
+// === Koble filterfelter til event listeners ===
 document.addEventListener("DOMContentLoaded", () => {
-  // Søkefelt oppdateres mens du skriver
   const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("input", applySearch);
-  }
+  if (searchInput) searchInput.addEventListener("input", applySearch);
 
-  // Dato-filter oppdateres når du endrer feltene
   const dateFromEl = document.getElementById("dateFrom");
   const dateToEl = document.getElementById("dateTo");
   if (dateFromEl) dateFromEl.addEventListener("change", applyDateFilter);
   if (dateToEl) dateToEl.addEventListener("change", applyDateFilter);
 
-  // Dropdown for type-filter
   const filterTypeEl = document.getElementById("filterType");
   if (filterTypeEl) filterTypeEl.addEventListener("change", applyFilter);
 
-  // Status-filter
   const statusFilterEl = document.getElementById("statusFilter");
   if (statusFilterEl) statusFilterEl.addEventListener("change", applyStatusFilter);
 
-  // Sorteringsvalg
   const sortSelectEl = document.getElementById("sortSelect");
   if (sortSelectEl) sortSelectEl.addEventListener("change", applySort);
 
-  // Antall per side
   const perPageEl = document.getElementById("perPage");
   if (perPageEl) perPageEl.addEventListener("change", changePerPage);
 });
