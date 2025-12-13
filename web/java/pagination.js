@@ -1,12 +1,11 @@
 // pagination.js – håndterer sidetall og navigasjon
-import { renderPage, getState, setPage } from './render.js';
+import { renderPage, setPage } from './render.js';
 
 export function renderPagination(elementId, currentPage, totalItems, perPage) {
   const maxPage = Math.ceil(totalItems / perPage) || 1;
   const el = document.getElementById(elementId);
   if (!el) return;
 
-  // Bygg knappene
   el.innerHTML = "";
 
   const prevBtn = document.createElement("button");
@@ -35,3 +34,6 @@ export function renderPagination(elementId, currentPage, totalItems, perPage) {
   });
   el.appendChild(nextBtn);
 }
+
+// Optional default export for compatibility
+export default renderPagination;
