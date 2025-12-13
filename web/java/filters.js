@@ -1,3 +1,5 @@
+import { renderPage } from './render.js';
+
 // === Global state for filtere ===
 let currentFilter = "";
 let currentSearch = "";
