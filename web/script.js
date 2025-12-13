@@ -5,25 +5,26 @@
 // Hvis du bruker ES6-moduler (anbefalt), kan du importere slik:
 // NB: Husk å legge til type="module" på <script> i HTML
 
+// Entry point for å hente inn modulene fra web/java/
+
 import './java/filters.js';
 import { renderPage } from './java/render.js';
 import './java/pagination.js';
 import './java/export.js';
 import './java/stats.js';
 
-// Init fra URL params og første render
-let currentPage = 1;
-
 document.addEventListener("DOMContentLoaded", () => {
   applyParamsFromURL();
-  renderPage(currentPage);
+  renderPage(currentPage); // bruker global currentPage fra render.js
 });
 
 function applyParamsFromURL() {
   const params = new URLSearchParams(window.location.search);
   const page = parseInt(params.get("page"), 10);
   if (!isNaN(page)) {
-    currentPage = page;
+    currentPage = page; // oppdaterer global currentPage
+  } else {
+    currentPage = 1;
   }
 }
 
