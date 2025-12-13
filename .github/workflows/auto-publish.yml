@@ -7,6 +7,9 @@ on:
       - completed
   workflow_dispatch:   # gir deg manuell trigger i Actions-fanen
 
+permissions:
+  contents: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -15,6 +18,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: main   # sjekk ut main branch (Pages bygger fra denne)
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Sett opp Python
         uses: actions/setup-python@v4
@@ -22,7 +27,6 @@ jobs:
           python-version: "3.11"
 
       # Avhengigheter: kun det generate_html.py faktisk trenger.
-      # Hvis generate_html.py ikke bruker Playwright, kan du droppe dette helt.
       - name: Installer avhengigheter
         run: |
           python -m pip install --upgrade pip
@@ -30,9 +34,16 @@ jobs:
       - name: Generer index.html fra template og data
         run: python generate_html.py
 
+      - name: Sett opp git remote
+        run: |
+          git remote remove origin || true
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote -v
+
       - name: Commit og push frontend
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: "index.html web/script.js web/style.css web/template.html postliste.json"
-          message: "Automatisk publish etter scraping"
-          push: true
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git add index.html web/script.js web/style.css web/template.html postliste.json
+          git commit -m "Automatisk publish etter scraping" || echo "Ingen endringer å committe"
+          git push origin main
