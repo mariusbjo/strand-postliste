@@ -55,7 +55,8 @@ function iconForType(doktype) {
   return "📄";
 }
 
-function parseDDMMYYYY(d) {
+// Eksporter parseDDMMYYYY slik at stats.js kan bruke den
+export function parseDDMMYYYY(d) {
   if (!d) return null;
   const parts = d.split(".");
   if (parts.length !== 3) return null;
