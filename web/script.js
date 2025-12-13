@@ -9,8 +9,7 @@
 
 import './java/filters.js';
 import { renderPage } from './java/render.js';
-import './java/pagination.js';
-import './java/export.js';
+import './java/exports.js';
 import './java/stats.js';
 
 document.addEventListener("DOMContentLoaded", () => {
