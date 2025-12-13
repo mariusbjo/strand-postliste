@@ -16,6 +16,9 @@ jobs:
     steps:
       - name: Sjekk ut repo
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true
+
 
       - name: Sett opp Python
         uses: actions/setup-python@v4
