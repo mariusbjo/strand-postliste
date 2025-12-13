@@ -1,4 +1,5 @@
-// Statistikk og diagrammer med Chart.js
+// stats.js – Statistikk og diagrammer med Chart.js
+import { parseDDMMYYYY } from './render.js';
 
 let weeklyChart = null;
 let typesChart = null;
