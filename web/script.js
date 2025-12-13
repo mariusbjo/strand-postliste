@@ -14,19 +14,12 @@ import './java/export.js';
 import './java/stats.js';
 
 document.addEventListener("DOMContentLoaded", () => {
-  applyParamsFromURL();
-  renderPage(currentPage); // bruker global currentPage fra render.js
-});
-
-function applyParamsFromURL() {
   const params = new URLSearchParams(window.location.search);
   const page = parseInt(params.get("page"), 10);
-  if (!isNaN(page)) {
-    currentPage = page; // oppdaterer global currentPage
-  } else {
-    currentPage = 1;
-  }
-}
+
+  // Kall renderPage med valgt side, eller 1 som fallback
+  renderPage(!isNaN(page) ? page : 1);
+});
 
 
 /* ===========================
