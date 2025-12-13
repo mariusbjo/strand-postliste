@@ -6,8 +6,10 @@ export function renderPagination(elementId, currentPage, totalItems, perPage) {
   const el = document.getElementById(elementId);
   if (!el) return;
 
+  // Tøm containeren
   el.innerHTML = "";
 
+  // Forrige-knapp
   const prevBtn = document.createElement("button");
   prevBtn.textContent = "◀ Forrige";
   prevBtn.disabled = currentPage === 1;
@@ -19,10 +21,12 @@ export function renderPagination(elementId, currentPage, totalItems, perPage) {
   });
   el.appendChild(prevBtn);
 
+  // Info om side
   const info = document.createElement("span");
   info.textContent = ` Side ${currentPage} av ${maxPage} `;
   el.appendChild(info);
 
+  // Neste-knapp
   const nextBtn = document.createElement("button");
   nextBtn.textContent = "Neste ▶";
   nextBtn.disabled = currentPage >= maxPage;
@@ -34,6 +38,3 @@ export function renderPagination(elementId, currentPage, totalItems, perPage) {
   });
   el.appendChild(nextBtn);
 }
-
-// Optional default export for compatibility
-export default renderPagination;
