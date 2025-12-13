@@ -55,6 +55,7 @@ jobs:
             python scraper_dates.py "${{ github.event.inputs.start_date }}"
           else
             python scraper_dates.py
+          fi
 
       - name: Sett opp git remote
         run: |
