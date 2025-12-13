@@ -1,13 +1,4 @@
-import { renderPage } from './render.js';
-
-// === Global state for filtere ===
-let currentFilter = "";
-let currentSearch = "";
-let currentStatus = "";
-let currentSort = "dato-desc";
-let dateFrom = "";
-let dateTo = "";
-let currentPage = 1;
+import { renderPage, currentSearch, currentFilter, currentStatus, currentSort, dateFrom, dateTo, currentPage } from './render.js';
 
 // === Filterfunksjoner ===
 function applySearch() {
