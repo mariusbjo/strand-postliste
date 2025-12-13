@@ -27,7 +27,7 @@ export function getState() {
 function escapeHtml(s) {
   if (!s) return "";
   return s.replace(/[&<>"]/g, c => (
-    {"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;"}[c]
+    {"&":"&amp;","<":"&lt;","&gt;","\"":"&quot;"}[c]
   ));
 }
 
@@ -69,7 +69,7 @@ function getDateForSort(d) {
 }
 
 // === Filtrering og sortering ===
-function getFilteredData() {
+export function getFilteredData() {
   let arr = data.slice();
 
   if (currentSearch) {
