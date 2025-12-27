@@ -33,10 +33,10 @@ jobs:
 
       - name: Sett mode til incremental i config.json
         run: |
-          jq '.mode="incremental"' config.json > tmp.json && mv tmp.json config.json
+          jq '.mode="incremental"' src/config/config.json > tmp.json && mv tmp.json src/config/config.json
 
       - name: Kjør scraper (incremental)
-        run: python scraper.py
+        run: python src/scrapers/scraper.py
 
       - name: Sett opp git remote
         run: |
@@ -49,9 +49,7 @@ jobs:
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          git add postliste.json changes.json
+          git add data/postliste.json data/changes.json
           git commit -m "Automatisk morgenoppdatering (incremental)" || echo "Ingen endringer å committe"
-          # Hent siste endringer fra main og legg dine commits oppå
           git pull --rebase origin main || echo "Ingen endringer å hente"
           git push origin main
-
