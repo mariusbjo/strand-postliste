@@ -29,7 +29,7 @@ jobs:
           playwright install chromium
 
       - name: Generer index.html fra template og data
-        run: python generate_html.py
+        run: python src/utils/generate_html.py
 
       - name: Sett opp git remote
         run: |
@@ -41,9 +41,7 @@ jobs:
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          git add index.html web/script.js web/style.css web/template.html postliste.json
+          git add web/index.html web/script.js web/style.css web/template.html data/postliste.json
           git commit -m "Force publish med oppdatert index.html og postliste.json" || echo "Ingen endringer å committe"
-          # Hent siste endringer fra main og legg dine commits oppå
           git pull --rebase origin main || echo "Ingen endringer å hente"
           git push origin main
-
