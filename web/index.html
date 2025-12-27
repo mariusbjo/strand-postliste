@@ -1,1 +1,109 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Postliste – Strand kommune</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <!-- Riktig sti etter omstrukturering -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="sticky-header">
+    <h1>Postliste – Strand kommune</h1>
+    <p class="updated">Oppdatert: 27.12.2025 23:30</p>
+  </header>
+
+  <!-- Filterseksjon -->
+  <section class="controls">
+    <div class="field">
+      <label for="searchInput">Søk i tittel/dokumentID</label>
+      <input type="text" id="searchInput" placeholder="Søk..." />
+    </div>
+    <div class="field">
+      <label for="dateFrom">Fra dato</label>
+      <input type="date" id="dateFrom" />
+    </div>
+    <div class="field">
+      <label for="dateTo">Til dato</label>
+      <input type="date" id="dateTo" />
+    </div>
+    <div class="field">
+      <label for="filterType">Dokumenttype</label>
+      <select id="filterType">
+        <option value="">Alle</option>
+        <option value="Inngående">Inngående</option>
+        <option value="Utgående">Utgående</option>
+        <option value="Sakskart">Sakskart</option>
+        <option value="Møtebok">Møtebok</option>
+        <option value="Møteprotokoll">Møteprotokoll</option>
+        <option value="Saksfremlegg">Saksfremlegg</option>
+        <option value="Internt">Internt</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="statusFilter">Status</label>
+      <select id="statusFilter">
+        <option value="">Alle</option>
+        <option value="Publisert">Publisert</option>
+        <option value="Må bes om innsyn">Må bes om innsyn</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sortSelect">Sortering</label>
+      <select id="sortSelect">
+        <option value="dato-desc">Dato nyeste først</option>
+        <option value="dato-asc">Dato eldste først</option>
+        <option value="type-asc">Type A–Å</option>
+        <option value="type-desc">Type Å–A</option>
+        <option value="status-publisert">Publisert først</option>
+        <option value="status-innsyn">Innsyn først</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="perPage">Per side</label>
+      <select id="perPage">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Sammendragstekst -->
+  <p class="summary" id="summary"></p>
+
+  <!-- Postliste -->
+  <section id="tab-postliste" class="tab-content active">
+    <nav id="pagination-top" class="pagination"></nav>
+    <main id="container" class="container"></main>
+    <nav id="pagination-bottom" class="pagination"></nav>
+  </section>
+
+  <!-- Dark mode toggle -->
+  <button class="toggle-dark" id="darkToggle">🌙 Dark mode</button>
+
+  <!-- Data og konfig -->
+  <script>
+    const data = [];
+    let perPage = 50;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const toggle = document.getElementById("darkToggle");
+      toggle.addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        toggle.textContent = document.body.classList.contains("dark")
+          ? "☀️ Light mode"
+          : "🌙 Dark mode";
+      });
+    });
+  </script>
+
+  <!-- Riktig sti etter omstrukturering -->
+  <script type="module" src="script.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+</html>
