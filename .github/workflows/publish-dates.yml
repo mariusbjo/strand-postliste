@@ -45,16 +45,16 @@ jobs:
 
       - name: Oppdater config.json med sideparametere
         run: |
-          echo '{"start_page": ${{ github.event.inputs.start_page }}, "max_pages": ${{ github.event.inputs.max_pages }}}' > config.json
+          echo '{"start_page": ${{ github.event.inputs.start_page }}, "max_pages": ${{ github.event.inputs.max_pages }}}' > src/config/config.json
 
       - name: Kjør scraper_dates med input
         run: |
           if [ -n "${{ github.event.inputs.start_date }}" ] && [ -n "${{ github.event.inputs.end_date }}" ]; then
-            python scraper_dates.py "${{ github.event.inputs.start_date }}" "${{ github.event.inputs.end_date }}"
+            python src/scrapers/scraper_dates.py "${{ github.event.inputs.start_date }}" "${{ github.event.inputs.end_date }}"
           elif [ -n "${{ github.event.inputs.start_date }}" ]; then
-            python scraper_dates.py "${{ github.event.inputs.start_date }}"
+            python src/scrapers/scraper_dates.py "${{ github.event.inputs.start_date }}"
           else
-            python scraper_dates.py
+            python src/scrapers/scraper_dates.py
           fi
 
       - name: Sett opp git remote
@@ -67,9 +67,7 @@ jobs:
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          git add postliste.json changes.json
+          git add data/postliste.json data/changes.json
           git commit -m "Manuell publish med scraper_dates" || echo "Ingen endringer å committe"
-          # Hent siste endringer fra main og legg dine commits oppå
           git pull --rebase origin main || echo "Ingen endringer å hente"
           git push origin main
-
