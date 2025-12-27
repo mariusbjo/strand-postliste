@@ -46,14 +46,17 @@
 
   <button class="toggle-dark" id="darkToggle">🌙 Dark mode</button>
 
-  <!-- Data lastes inn fra JSON -->
-  <script>
-    let data = [];
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Modulscript som importerer initStats -->
+  <script type="module">
+    import { initStats } from "./java/stats.js";
 
     async function loadData() {
       try {
         const response = await fetch("../data/postliste.json");
-        data = await response.json();
+        const data = await response.json();
         initStats(data);
       } catch (e) {
         console.error("Kunne ikke laste data:", e);
@@ -72,12 +75,6 @@
       });
     });
   </script>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Statistikklogikk -->
-  <script type="module" src="java/stats.js"></script>
 
 </body>
 </html>
