@@ -3,9 +3,10 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-DATA_FILE = "postliste.json"        # ligger i rot
-OUTPUT_FILE = "index.html"          # skal ligge i rot
-TEMPLATE_FILE = "web/template.html" # ligger i web/
+# Oppdaterte filstier etter omstrukturering
+DATA_FILE = "data/postliste.json"        # ligger nå i data/
+OUTPUT_FILE = "web/index.html"           # skal ligge i web/
+TEMPLATE_FILE = "web/template.html"      # ligger i web/
 
 PER_PAGE = 50  # standard antall per side (kan endres)
 
