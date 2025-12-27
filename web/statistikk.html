@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <title>Statistikk – Strand kommune postliste</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <header class="sticky-header">
+    <h1>Statistikk – Strand kommune</h1>
+    <p class="updated">Basert på data fra postlisten</p>
+  </header>
+
+  <main class="stats-page">
+
+    <section class="stats-intro">
+      <h2>Oversikt</h2>
+      <p>Denne siden visualiserer volum, dokumenttyper, publiseringsmønstre og utvikling over tid basert på postlisten.</p>
+    </section>
+
+    <section class="stats-section">
+      <h3>📈 Dokumenter per måned</h3>
+      <canvas id="chartPerMonth"></canvas>
+    </section>
+
+    <section class="stats-section">
+      <h3>📄 Dokumenter per type</h3>
+      <canvas id="chartPerType"></canvas>
+    </section>
+
+    <section class="stats-section">
+      <h3>📊 Publisert vs. Innsyn</h3>
+      <canvas id="chartStatus"></canvas>
+    </section>
+
+    <section class="stats-section">
+      <h3>📅 Dokumenter per år</h3>
+      <canvas id="chartPerYear"></canvas>
+    </section>
+
+  </main>
+
+  <button class="toggle-dark" id="darkToggle">🌙 Dark mode</button>
+
+  <!-- Data lastes inn fra JSON -->
+  <script>
+    let data = [];
+
+    async function loadData() {
+      try {
+        const response = await fetch("../data/postliste.json");
+        data = await response.json();
+        initStats(data);
+      } catch (e) {
+        console.error("Kunne ikke laste data:", e);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadData();
+
+      const toggle = document.getElementById("darkToggle");
+      toggle.addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        toggle.textContent = document.body.classList.contains("dark")
+          ? "☀️ Light mode"
+          : "🌙 Dark mode";
+      });
+    });
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Statistikklogikk -->
+  <script type="module" src="java/stats.js"></script>
+
+</body>
+</html>
