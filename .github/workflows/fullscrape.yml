@@ -68,7 +68,7 @@ jobs:
           mkdir -p data/archive
           mv data/postliste.json data/archive/postliste_2006_H1.json
 
-      - name: Commit og push H1
+      - name: Commit og push H1 (konkurransesikker)
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
@@ -76,8 +76,15 @@ jobs:
           git add data/archive/postliste_2006_H1.json src/config/config_fullscrape.json
           git commit -m "Scrape 2006 H1" || echo "Ingen endringer å committe"
 
-          git pull --rebase origin main || echo "Ingen endringer å hente"
-          git push origin main
+          git stash --include-untracked || true
+          git pull --rebase --autostash origin main || true
+          git stash pop || true
+
+          for i in {1..5}; do
+            git push origin main && break
+            echo "Push feilet, prøver igjen ($i/5)..."
+            git pull --rebase --autostash origin main || true
+          done
 
   scrape_2006_H2:
     runs-on: ubuntu-latest
@@ -141,7 +148,7 @@ jobs:
           mkdir -p data/archive
           mv data/postliste.json data/archive/postliste_2006_H2.json
 
-      - name: Commit og push H2
+      - name: Commit og push H2 (konkurransesikker)
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
@@ -149,5 +156,12 @@ jobs:
           git add data/archive/postliste_2006_H2.json src/config/config_fullscrape.json
           git commit -m "Scrape 2006 H2" || echo "Ingen endringer å committe"
 
-          git pull --rebase origin main || echo "Ingen endringer å hente"
-          git push origin main
+          git stash --include-untracked || true
+          git pull --rebase --autostash origin main || true
+          git stash pop || true
+
+          for i in {1..5}; do
+            git push origin main && break
+            echo "Push feilet, prøver igjen ($i/5)..."
+            git pull --rebase --autostash origin main || true
+          done
