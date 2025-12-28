@@ -28,9 +28,12 @@ jobs:
     steps:
       - name: Sjekk ut repo
         uses: actions/checkout@v3
-        with:
-          persist-credentials: true
-          fetch-depth: 0
+
+      - name: Sett working directory
+        run: |
+          echo "Working directory:"
+          pwd
+          ls -la
 
       - name: Sett opp Python
         uses: actions/setup-python@v4
@@ -45,14 +48,6 @@ jobs:
 
       - name: Skriv config.json basert på input
         run: |
-          echo "=== INPUT FRA ACTIONS ==="
-          echo "start_date:  ${{ github.event.inputs.start_date }}"
-          echo "end_date:    ${{ github.event.inputs.end_date }}"
-          echo "start_page:  ${{ github.event.inputs.start_page }}"
-          echo "max_pages:   ${{ github.event.inputs.max_pages }}"
-          echo ""
-          echo "=== SKRIVER config.json ==="
-
           mkdir -p src/config
           echo "{" > src/config/config.json
           echo "  \"start_page\": ${{ github.event.inputs.start_page }}," >> src/config/config.json
@@ -66,11 +61,9 @@ jobs:
       - name: Kjør scraper_dates.py
         run: |
           echo "=== STARTER SCRAPER ==="
-          if [ -n "${{ github.event.inputs.end_date }}" ]; then
-            python src/scrapers/scraper_dates.py "${{ github.event.inputs.start_date }}" "${{ github.event.inputs.end_date }}"
-          else
-            python src/scrapers/scraper_dates.py "${{ github.event.inputs.start_date }}"
-          fi
+          python src/scrapers/scraper_dates.py \
+            "${{ github.event.inputs.start_date }}" \
+            "${{ github.event.inputs.end_date }}"
 
       - name: Commit og push oppdateringer
         run: |
