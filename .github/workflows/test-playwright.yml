@@ -1,0 +1,48 @@
+name: Test Playwright
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Installer Playwright + deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install chromium
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2t64
+
+      - name: Test Playwright import
+        run: |
+          echo "=== TESTER PLAYWRIGHT IMPORT ==="
+          python - << 'EOF'
+import sys
+print("Python OK")
+try:
+    from playwright.sync_api import sync_playwright
+    print("Playwright import OK")
+except Exception as e:
+    print("Playwright import FEILET:", e)
+EOF
