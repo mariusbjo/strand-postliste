@@ -175,7 +175,17 @@ def main(start_date=None, end_date=None):
     print("[DEBUG] Før Playwright startes")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+    print("[DEBUG] Etter Playwright startet")
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-gpu",
+                "--disable-dev-shm-usage",
+                "--disable-setuid-sandbox",
+                "--disable-software-rasterizer"
+            ]
+        )
 
         page_num = start_page
         while page_num <= max_pages:
@@ -202,8 +212,6 @@ def main(start_date=None, end_date=None):
 
         browser.close()
     
-    print("[DEBUG] Etter Playwright startet")
-
     print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
     update_json(all_docs)
 
