@@ -14,13 +14,23 @@ BASE_URL = "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkni
 # ------------------------------
 
 def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        raise FileNotFoundError(f"Mangler config.json: {CONFIG_FILE}")
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        cfg = json.load(f)
-    print(f"[INFO] Lest config.json: {cfg}")
-    return cfg
+    # Fullscrape har egen config
+    fullscrape_cfg = "../config/config_fullscrape.json"
+    normal_cfg = "../config/config.json"
 
+    if os.path.exists(fullscrape_cfg):
+        cfg_path = fullscrape_cfg
+    else:
+        cfg_path = normal_cfg
+
+    if not os.path.exists(cfg_path):
+        raise FileNotFoundError(f"Mangler config-fil: {cfg_path}")
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+
+    print(f"[INFO] Lest config: {cfg_path} → {cfg}")
+    return cfg
 
 def load_existing():
     if os.path.exists(DATA_FILE):
