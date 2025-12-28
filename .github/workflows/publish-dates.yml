@@ -53,10 +53,10 @@ jobs:
           echo ""
           echo "=== SKRIVER config.json ==="
 
-          cat > src/config/config.json <<EOF
+          cat <<EOF > src/config/config.json
 {
-  "start_page": ${GITHUB_EVENT_INPUT_START_PAGE:-${{ github.event.inputs.start_page }}},
-  "max_pages": ${GITHUB_EVENT_INPUT_MAX_PAGES:-${{ github.event.inputs.max_pages }}},
+  "start_page": ${{ github.event.inputs.start_page }},
+  "max_pages": ${{ github.event.inputs.max_pages }},
   "per_page": 100
 }
 EOF
