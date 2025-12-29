@@ -1,1 +1,20 @@
+/* ============================================================
+   📈 ENDRINGER – Dashboard
+   ============================================================ */
 
+.graph-container {
+  max-width: 600px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.tables-grid {
+  display: flex;
+  gap: 1rem;
+}
+
+.table-card {
+  width: 33%;
+  min-width: 33%;
+  display: flex;
+  flex-direction: column;
+}
