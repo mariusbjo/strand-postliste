@@ -6,6 +6,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: postliste-scraping
+  cancel-in-progress: false
+
 jobs:
   scrape_H1:
     runs-on: ubuntu-latest
