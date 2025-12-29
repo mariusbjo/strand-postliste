@@ -61,7 +61,7 @@ jobs:
             libgbm1 \
             libasound2t64
 
-      - name: Skriv config.json basert på input
+      - name: Skriv config_dates.json basert på input
         run: |
           mkdir -p src/config
           {
@@ -70,16 +70,17 @@ jobs:
             echo "  \"max_pages\": ${{ github.event.inputs.max_pages }},"
             echo "  \"per_page\": 100"
             echo "}"
-          } > src/config/config.json
+          } > src/config/config_dates.json
 
-          echo "=== INNHOLD I config.json ==="
-          cat src/config/config.json
+          echo "=== INNHOLD I config_dates.json ==="
+          cat src/config/config_dates.json
 
       - name: Kjør scraper_dates.py
         working-directory: src/scrapers
         run: |
-          echo "=== STARTER SCRAPER ==="
+          echo "=== STARTER SCRAPER (publish-dates) ==="
           python scraper_dates.py \
+            --config ../config/config_dates.json \
             "${{ github.event.inputs.start_date }}" \
             "${{ github.event.inputs.end_date }}"
 
@@ -91,23 +92,15 @@ jobs:
           echo "=== Endringer i data/ ==="
           git status data/
 
-          # Legg til endringer
           git add data/postliste.json || true
           git add data/changes.json || true
 
-          # Commit hvis det finnes endringer
           git commit -m "Oppdatert postliste via publish-dates workflow" || echo "Ingen endringer å committe"
 
-          # Stash alt som ikke er commit'et
           git stash --include-untracked || true
-
-          # Hent siste endringer fra main
           git pull --rebase --autostash origin main || true
-
-          # Legg tilbake stash (hvis det finnes)
           git stash pop || true
 
-          # Prøv å pushe opptil 5 ganger
           for i in {1..5}; do
             git push origin main && break
             echo "Push feilet, prøver igjen ($i/5)..."
