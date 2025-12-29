@@ -411,3 +411,23 @@ body.landing {
     font-size: 1.5rem;
     cursor: pointer;
 }
+
+.collapsible-controls {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.collapsible-controls button {
+    padding: 0.4rem 0.8rem;
+    border: none;
+    background: #0077cc;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.collapsible-controls button:hover {
+    background: #005fa3;
+}
