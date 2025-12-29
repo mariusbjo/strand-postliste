@@ -6,37 +6,60 @@ from datetime import datetime, date
 CONFIG_FILE = "../config/config.json"
 DATA_FILE = "../../data/postliste.json"
 
-BASE_URL = "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/?page={page}&pageSize={page_size}"
+BASE_URL = (
+    "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/"
+    "postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/"
+    "#/?page={page}&pageSize={page_size}"
+)
 
 # ------------------------------
-# Utility-funksjoner
+# SELVHELBREDENDE FILSYSTEM
+# ------------------------------
+
+def ensure_directories():
+    os.makedirs("../../data", exist_ok=True)
+    os.makedirs("../config", exist_ok=True)
+
+def ensure_file(path, default):
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(default, f, ensure_ascii=False, indent=2)
+
+# ------------------------------
+# LASTING AV KONFIG OG DATA
 # ------------------------------
 
 def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        raise FileNotFoundError(f"Mangler config.json: {CONFIG_FILE}")
-
+    ensure_file(CONFIG_FILE, {
+        "start_page": 1,
+        "max_pages": 100,
+        "per_page": 100
+    })
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        cfg = json.load(f)
-
-    print(f"[INFO] Lest config.json: {cfg}")
-    return cfg
-
+        return json.load(f)
 
 def load_existing():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return {d["dokumentID"]: d for d in json.load(f)}
-        except Exception:
-            return {}
-    return {}
+    ensure_file(DATA_FILE, [])
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return {d["dokumentID"]: d for d in data if "dokumentID" in d}
+    except Exception:
+        return {}
 
+# ------------------------------
+# ATOMISK SKRIVING
+# ------------------------------
 
-def save_json(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
+def atomic_write(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
 
+# ------------------------------
+# UTILITY
+# ------------------------------
 
 def safe_text(el, sel):
     try:
@@ -44,7 +67,6 @@ def safe_text(el, sel):
         return node.inner_text().strip() if node else ""
     except:
         return ""
-
 
 def parse_dato_str(s):
     if not s:
@@ -59,13 +81,11 @@ def parse_dato_str(s):
     except:
         return None
 
-
 def format_dato_ddmmYYYY(d):
     return d.strftime("%d.%m.%Y") if d else ""
 
-
 # ------------------------------
-# Hent én side
+# HENT ÉN SIDE
 # ------------------------------
 
 def hent_side(page_num, browser, per_page):
@@ -76,13 +96,8 @@ def hent_side(page_num, browser, per_page):
 
     try:
         page.goto(url, timeout=60000, wait_until="domcontentloaded")
-
-        # Gi siden tid til å laste API-data (GitHub Actions er treg)
         time.sleep(5)
-
-        # Vent på at artiklene faktisk dukker opp
         page.wait_for_selector("article.bc-content-teaser--item", timeout=30000)
-
     except Exception:
         print("[WARN] Ingen artikler funnet på denne siden.")
         page.close()
@@ -107,7 +122,6 @@ def hent_side(page_num, browser, per_page):
             if avsender else (f"Mottaker: {mottaker}" if mottaker else "")
         )
 
-        # Hent detalj-link
         detalj_link = ""
         try:
             link_elem = art.evaluate_handle("node => node.closest('a')")
@@ -118,7 +132,6 @@ def hent_side(page_num, browser, per_page):
         if detalj_link and not detalj_link.startswith("http"):
             detalj_link = "https://www.strand.kommune.no" + detalj_link
 
-        # Hent filer
         filer = []
         if detalj_link:
             dp = browser.new_page()
@@ -154,9 +167,8 @@ def hent_side(page_num, browser, per_page):
     print(f"[INFO] Fant {len(docs)} dokumenter på side {page_num}.")
     return docs
 
-
 # ------------------------------
-# Hovedlogikk
+# HOVEDLOGIKK
 # ------------------------------
 
 def within_range(d, start_date, end_date):
@@ -168,19 +180,20 @@ def within_range(d, start_date, end_date):
         return False
     return True
 
-
 def update_json(new_docs):
+    # Last eksisterende data på nytt (i tilfelle annen workflow har oppdatert filen)
     existing = load_existing()
     updated = dict(existing)
 
     for d in new_docs:
         doc_id = d["dokumentID"]
         old = updated.get(doc_id)
+
         if not old:
             print(f"[NEW] {doc_id} – {d['tittel']}")
-        else:
-            if old != d:
-                print(f"[UPDATE] {doc_id} – {d['tittel']}")
+        elif old != d:
+            print(f"[UPDATE] {doc_id} – {d['tittel']}")
+
         updated[doc_id] = d
 
     def sort_key(x):
@@ -190,12 +203,14 @@ def update_json(new_docs):
             return date.min
 
     data_list = sorted(updated.values(), key=sort_key, reverse=True)
-    save_json(data_list)
-    print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
+    atomic_write(DATA_FILE, data_list)
+    print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
 
 def main(start_date=None, end_date=None):
     print("[INFO] Starter scraper_dates…")
+
+    ensure_directories()
 
     cfg = load_config()
     start_page = int(cfg.get("start_page", 1))
@@ -222,22 +237,18 @@ def main(start_date=None, end_date=None):
                 print(f"[INFO] Ingen dokumenter på side {page_num}, stopper.")
                 break
 
-            # Filtrer på dato-range
             for d in docs:
                 pd = parse_dato_str(d.get("dato"))
                 if within_range(pd, start_date, end_date):
                     all_docs.append(d)
 
-            # Tidlig stopp hvis alle datoer er eldre enn start_date
             parsed_on_page = [
                 parse_dato_str(x.get("dato")) for x in docs if x.get("dato")
             ]
             if start_date and parsed_on_page and all(
                 x and x < start_date for x in parsed_on_page
             ):
-                print(
-                    f"[INFO] Tidlig stopp: alle datoer på side {page_num} er eldre enn start_date"
-                )
+                print("[INFO] Tidlig stopp: alle datoer på siden er eldre enn start_date")
                 break
 
             page_num += 1
@@ -246,7 +257,6 @@ def main(start_date=None, end_date=None):
 
     print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
     update_json(all_docs)
-
 
 # ------------------------------
 # CLI
