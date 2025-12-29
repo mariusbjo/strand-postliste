@@ -38,3 +38,35 @@ async function initDashboard() {
 // -------------------------------
 
 document.addEventListener("DOMContentLoaded", initDashboard);
+
+// ===============================
+//  COLLAPSIBLES
+// ===============================
+
+function initCollapsibles() {
+    const headers = document.querySelectorAll(".collapsible-header");
+
+    headers.forEach(header => {
+        header.addEventListener("click", () => {
+            header.parentElement.classList.toggle("open");
+        });
+    });
+
+    // Åpne/lukke alle knapper
+    const openAllBtn = document.getElementById("open-all");
+    const closeAllBtn = document.getElementById("close-all");
+
+    if (openAllBtn) {
+        openAllBtn.addEventListener("click", () => {
+            document.querySelectorAll(".collapsible").forEach(c => c.classList.add("open"));
+        });
+    }
+
+    if (closeAllBtn) {
+        closeAllBtn.addEventListener("click", () => {
+            document.querySelectorAll(".collapsible").forEach(c => c.classList.remove("open"));
+        });
+    }
+}
+
+document.addEventListener("DOMContentLoaded", initCollapsibles);
