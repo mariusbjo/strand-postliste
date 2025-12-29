@@ -80,24 +80,28 @@ export function renderTables(changes, postliste) {
 
 
 // ---------------------------
-//  Detaljvisning
+//  POPUP-DETALJVISNING
 // ---------------------------
 
 function showDetail(change, postliste) {
-    const section = document.getElementById("detail-section");
-    const container = document.getElementById("detail-content");
-
-    section.classList.remove("hidden");
+    const modal = document.getElementById("detail-modal");
+    const body = document.getElementById("modal-body");
 
     const doc = postliste[change.dokumentID];
 
-    container.innerHTML = `
-        <h3>${doc?.tittel || "Ukjent dokument"}</h3>
+    body.innerHTML = `
+        <h2>${doc?.tittel || "Ukjent dokument"}</h2>
         <p><strong>DokumentID:</strong> ${change.dokumentID}</p>
         <p><strong>Tidspunkt:</strong> ${change.tidspunkt}</p>
         <p><strong>Type:</strong> ${change.type}</p>
 
-        <h4>Endringer:</h4>
+        <h3>Endringer:</h3>
         <pre>${JSON.stringify(change.endringer, null, 2)}</pre>
     `;
+
+    modal.classList.remove("hidden");
 }
+
+document.getElementById("modal-close").addEventListener("click", () => {
+    document.getElementById("detail-modal").classList.add("hidden");
+});
