@@ -473,3 +473,9 @@ body {
     max-width: 600px;
     margin: 0 auto 1.5rem auto;
 }
+
+.tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+}
