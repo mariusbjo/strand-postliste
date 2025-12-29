@@ -1,9 +1,18 @@
 from playwright.sync_api import sync_playwright
-import json, os, time, sys
+import json, os, time, sys, argparse
 from datetime import datetime, date
 
-# === Relative stier (fra src/scrapers/) ===
-CONFIG_FILE = "../config/config.json"
+# ------------------------------
+# ARGUMENTPARSING (STRATEGI A)
+# ------------------------------
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", default="../config/config.json")
+parser.add_argument("start_date", nargs="?")
+parser.add_argument("end_date", nargs="?")
+args = parser.parse_args()
+
+CONFIG_FILE = args.config
 DATA_FILE = "../../data/postliste.json"
 
 BASE_URL = (
@@ -18,7 +27,7 @@ BASE_URL = (
 
 def ensure_directories():
     os.makedirs("../../data", exist_ok=True)
-    os.makedirs("../config", exist_ok=True)
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
 
 def ensure_file(path, default):
     if not os.path.exists(path):
@@ -181,7 +190,6 @@ def within_range(d, start_date, end_date):
     return True
 
 def update_json(new_docs):
-    # Last eksisterende data på nytt (i tilfelle annen workflow har oppdatert filen)
     existing = load_existing()
     updated = dict(existing)
 
@@ -263,14 +271,11 @@ def main(start_date=None, end_date=None):
 # ------------------------------
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    start_date = None
-    end_date = None
+    sd = args.start_date
+    ed = args.end_date
 
-    if len(args) >= 1 and args[0]:
-        start_date = datetime.strptime(args[0], "%Y-%m-%d").date()
-    if len(args) >= 2 and args[1]:
-        end_date = datetime.strptime(args[1], "%Y-%m-%d").date()
+    start_date = datetime.strptime(sd, "%Y-%m-%d").date() if sd else None
+    end_date = datetime.strptime(ed, "%Y-%m-%d").date() if ed else None
 
     if start_date and not end_date:
         end_date = start_date
