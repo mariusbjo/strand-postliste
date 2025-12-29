@@ -70,3 +70,16 @@ function initCollapsibles() {
 }
 
 document.addEventListener("DOMContentLoaded", initCollapsibles);
+
+// ===============================
+//  THEME TOGGLE
+// ===============================
+
+function initThemeToggle() {
+    const btn = document.getElementById("theme-toggle");
+    btn.addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+    });
+}
+
+document.addEventListener("DOMContentLoaded", initThemeToggle);
