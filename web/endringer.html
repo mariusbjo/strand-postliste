@@ -8,132 +8,155 @@
 
 <body>
 
-    <header>
-        <h1>Endringsdashboard</h1>
-        <p class="subtitle">Oversikt over endringer i kommunens postliste</p>
-    </header>
+<header>
+    <h1>Endringsdashboard</h1>
+    <p class="subtitle">Oversikt over endringer i kommunens postliste</p>
+</header>
 
-    <!-- ========================= -->
-    <!--  SEKSJON 1: TOPPLINJE KPI -->
-    <!-- ========================= -->
-    <section id="kpi-section" class="dashboard-section">
-        <div class="kpi-grid">
+<!-- ========================= -->
+<!--  SEKSJON 1: KPI-BOKSER    -->
+<!-- ========================= -->
+<section id="kpi-section" class="dashboard-section">
+    <div class="kpi-grid">
 
-            <div class="kpi-box" id="kpi-new-docs">
-                <h3>Nye dokumenter</h3>
-                <div class="kpi-value" id="kpi-new-docs-value">–</div>
-                <p class="kpi-desc">Siste 30 dager</p>
-            </div>
-
-            <div class="kpi-box" id="kpi-updated-docs">
-                <h3>Oppdaterte dokumenter</h3>
-                <div class="kpi-value" id="kpi-updated-docs-value">–</div>
-                <p class="kpi-desc">Siste 30 dager</p>
-            </div>
-
-            <div class="kpi-box" id="kpi-change-rate">
-                <h3>Endringsrate</h3>
-                <div class="kpi-value" id="kpi-change-rate-value">–</div>
-                <p class="kpi-desc">Oppdaterte / totale</p>
-            </div>
-
-            <div class="kpi-box" id="kpi-new-files">
-                <h3>Nye filer</h3>
-                <div class="kpi-value" id="kpi-new-files-value">–</div>
-                <p class="kpi-desc">Dokumenter med nye vedlegg</p>
-            </div>
-
-            <div class="kpi-box" id="kpi-status-changes">
-                <h3>Statusendringer</h3>
-                <div class="kpi-value" id="kpi-status-changes-value">–</div>
-                <p class="kpi-desc">Publisert / Innsyn</p>
-            </div>
-
+        <div class="kpi-box" id="kpi-new-docs">
+            <h3>Nye dokumenter</h3>
+            <div class="kpi-value" id="kpi-new-docs-value">–</div>
+            <p class="kpi-desc">Siste 30 dager</p>
         </div>
-    </section>
 
-    <!-- ========================= -->
-    <!--  SEKSJON 2: GRAFER        -->
-    <!-- ========================= -->
-    <section id="graphs-section" class="dashboard-section">
+        <div class="kpi-box" id="kpi-updated-docs">
+            <h3>Oppdaterte dokumenter</h3>
+            <div class="kpi-value" id="kpi-updated-docs-value">–</div>
+            <p class="kpi-desc">Siste 30 dager</p>
+        </div>
 
-        <h2>Trender og utvikling</h2>
+        <div class="kpi-box" id="kpi-change-rate">
+            <h3>Endringsrate</h3>
+            <div class="kpi-value" id="kpi-change-rate-value">–</div>
+            <p class="kpi-desc">Oppdaterte / totale</p>
+        </div>
 
-        <div class="graph-container">
-            <h3>Endringer over tid</h3>
+        <div class="kpi-box" id="kpi-new-files">
+            <h3>Nye filer</h3>
+            <div class="kpi-value" id="kpi-new-files-value">–</div>
+            <p class="kpi-desc">Dokumenter med nye vedlegg</p>
+        </div>
+
+        <div class="kpi-box" id="kpi-status-changes">
+            <h3>Statusendringer</h3>
+            <div class="kpi-value" id="kpi-status-changes-value">–</div>
+            <p class="kpi-desc">Publisert / Innsyn</p>
+        </div>
+
+    </div>
+</section>
+
+<!-- ========================= -->
+<!--  SEKSJON 2: GRAFER        -->
+<!-- ========================= -->
+<section id="graphs-section" class="dashboard-section">
+
+    <h2>Trender og utvikling</h2>
+
+    <div class="collapsible">
+        <div class="collapsible-header">Endringer over tid</div>
+        <div class="collapsible-body">
             <canvas id="graph-changes-over-time"></canvas>
         </div>
+    </div>
 
-        <div class="graph-container">
-            <h3>Endringer per dokumenttype</h3>
+    <div class="collapsible">
+        <div class="collapsible-header">Endringer per dokumenttype</div>
+        <div class="collapsible-body">
             <canvas id="graph-by-type"></canvas>
         </div>
+    </div>
 
-        <div class="graph-container">
-            <h3>Hvilke felter endres mest?</h3>
+    <div class="collapsible">
+        <div class="collapsible-header">Hvilke felter endres mest?</div>
+        <div class="collapsible-body">
             <canvas id="graph-field-changes"></canvas>
         </div>
+    </div>
 
-    </section>
+</section>
 
-    <!-- ========================= -->
-    <!--  SEKSJON 3: TABELLER      -->
-    <!-- ========================= -->
-    <section id="tables-section" class="dashboard-section">
+<!-- ========================= -->
+<!--  SEKSJON 3: TABELLER      -->
+<!-- ========================= -->
+<section id="tables-section" class="dashboard-section">
 
-        <h2>Siste endringer</h2>
-        <table id="table-latest-changes" class="data-table">
-            <thead>
-                <tr>
-                    <th>Tidspunkt</th>
-                    <th>DokumentID</th>
-                    <th>Tittel</th>
-                    <th>Type</th>
-                    <th>Felter</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <h2>Siste endringer</h2>
+    <div class="collapsible open">
+        <div class="collapsible-header">Vis siste endringer</div>
+        <div class="collapsible-body">
+            <table id="table-latest-changes" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Tidspunkt</th>
+                        <th>DokumentID</th>
+                        <th>Tittel</th>
+                        <th>Type</th>
+                        <th>Felter</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-        <h2>Dokumenter med flest endringer</h2>
-        <table id="table-most-changed" class="data-table">
-            <thead>
-                <tr>
-                    <th>DokumentID</th>
-                    <th>Tittel</th>
-                    <th>Antall endringer</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <h2>Dokumenter med flest endringer</h2>
+    <div class="collapsible">
+        <div class="collapsible-header">Vis toppliste</div>
+        <div class="collapsible-body">
+            <table id="table-most-changed" class="data-table">
+                <thead>
+                    <tr>
+                        <th>DokumentID</th>
+                        <th>Tittel</th>
+                        <th>Antall endringer</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-        <h2>Dokumenter med nye filer</h2>
-        <table id="table-new-files" class="data-table">
-            <thead>
-                <tr>
-                    <th>DokumentID</th>
-                    <th>Tittel</th>
-                    <th>Antall nye filer</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <h2>Dokumenter med nye filer</h2>
+    <div class="collapsible">
+        <div class="collapsible-header">Vis dokumenter</div>
+        <div class="collapsible-body">
+            <table id="table-new-files" class="data-table">
+                <thead>
+                    <tr>
+                        <th>DokumentID</th>
+                        <th>Tittel</th>
+                        <th>Antall nye filer</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-    </section>
+</section>
 
-    <!-- ========================= -->
-    <!--  SEKSJON 4: DETALJVISNING -->
-    <!-- ========================= -->
-    <section id="detail-section" class="dashboard-section hidden">
-        <h2>Endringshistorikk for dokument</h2>
-        <div id="detail-content"></div>
-    </section>
+<!-- ========================= -->
+<!--  POPUP-MODAL              -->
+<!-- ========================= -->
+<div id="detail-modal" class="modal hidden">
+    <div class="modal-content">
+        <span id="modal-close">&times;</span>
+        <div id="modal-body"></div>
+    </div>
+</div>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Dashboard JS (modul) -->
-    <script type="module" src="java/endringer.js"></script>
+<!-- Dashboard JS -->
+<script type="module" src="java/endringer.js"></script>
+
 </body>
 </html>
-
