@@ -7,6 +7,14 @@ on:
         description: "Årstall for fullscrape (f.eks. 2009)"
         required: true
         type: string
+      start_page:
+        description: "Start page (f.eks. 3475)"
+        required: true
+        type: string
+      max_pages:
+        description: "Max pages (f.eks. 3505)"
+        required: true
+        type: string
       h1_start:
         description: "Startdato H1 (YYYY-MM-DD)"
         required: true
@@ -74,8 +82,8 @@ jobs:
           mkdir -p src/config
           {
             echo "{"
-            echo "  \"start_page\": 3475,"
-            echo "  \"max_pages\": 3505,"
+            echo "  \"start_page\": ${{ github.event.inputs.start_page }},"
+            echo "  \"max_pages\": ${{ github.event.inputs.max_pages }},"
             echo "  \"per_page\": 100"
             echo "}"
           } > src/config/config_fullscrape.json
@@ -159,8 +167,8 @@ jobs:
           mkdir -p src/config
           {
             echo "{"
-            echo "  \"start_page\": 3475,"
-            echo "  \"max_pages\": 3505,"
+            echo "  \"start_page\": ${{ github.event.inputs.start_page }},"
+            echo "  \"max_pages\": ${{ github.event.inputs.max_pages }},"
             echo "  \"per_page\": 100"
             echo "}"
           } > src/config/config_fullscrape.json
