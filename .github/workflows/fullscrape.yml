@@ -2,6 +2,27 @@ name: Full historical scrape
 
 on:
   workflow_dispatch:
+    inputs:
+      year:
+        description: "Årstall for fullscrape (f.eks. 2009)"
+        required: true
+        type: string
+      h1_start:
+        description: "Startdato H1 (YYYY-MM-DD)"
+        required: true
+        type: string
+      h1_end:
+        description: "Sluttdato H1 (YYYY-MM-DD)"
+        required: true
+        type: string
+      h2_start:
+        description: "Startdato H2 (YYYY-MM-DD)"
+        required: true
+        type: string
+      h2_end:
+        description: "Sluttdato H2 (YYYY-MM-DD)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,6 +32,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
   scrape_H1:
     runs-on: ubuntu-latest
 
@@ -67,20 +89,22 @@ jobs:
           echo "=== STARTER FULLSCRAPE H1 ==="
           python scraper_dates.py \
             --config ../config/config_fullscrape.json \
-            "2009-01-01" "2009-06-30"
+            "${{ github.event.inputs.h1_start }}" \
+            "${{ github.event.inputs.h1_end }}"
 
-      - name: Arkiver H1-resultat (beholder postliste.json)
+      - name: Arkiver H1-resultat
         run: |
           mkdir -p data/archive
-          cp data/postliste.json data/archive/postliste_2009_H1.json
+          cp data/postliste.json \
+            "data/archive/postliste_${{ github.event.inputs.year }}_H1.json"
 
       - name: Commit og push H1 (konkurransesikker)
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-          git add data/archive/postliste_2009_H1.json src/config/config_fullscrape.json
-          git commit -m "Fullscrape 2009 H1" || echo "Ingen endringer å committe"
+          git add data/archive/postliste_${{ github.event.inputs.year }}_H1.json src/config/config_fullscrape.json
+          git commit -m "Fullscrape ${{ github.event.inputs.year }} H1" || echo "Ingen endringer å committe"
 
           git stash --include-untracked || true
           git pull --rebase --autostash origin main || true
@@ -91,6 +115,7 @@ jobs:
             echo "Push feilet, prøver igjen ($i/5)..."
             git pull --rebase --autostash origin main || true
           done
+
 
   scrape_H2:
     runs-on: ubuntu-latest
@@ -149,20 +174,22 @@ jobs:
           echo "=== STARTER FULLSCRAPE H2 ==="
           python scraper_dates.py \
             --config ../config/config_fullscrape.json \
-            "2009-07-01" "2009-12-31"
+            "${{ github.event.inputs.h2_start }}" \
+            "${{ github.event.inputs.h2_end }}"
 
-      - name: Arkiver H2-resultat (beholder postliste.json)
+      - name: Arkiver H2-resultat
         run: |
           mkdir -p data/archive
-          cp data/postliste.json data/archive/postliste_2009_H2.json
+          cp data/postliste.json \
+            "data/archive/postliste_${{ github.event.inputs.year }}_H2.json"
 
       - name: Commit og push H2 (konkurransesikker)
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-          git add data/archive/postliste_2009_H2.json src/config/config_fullscrape.json
-          git commit -m "Fullscrape 2009 H2" || echo "Ingen endringer å committe"
+          git add data/archive/postliste_${{ github.event.inputs.year }}_H2.json src/config/config_fullscrape.json
+          git commit -m "Fullscrape ${{ github.event.inputs.year }} H2" || echo "Ingen endringer å committe"
 
           git stash --include-untracked || true
           git pull --rebase --autostash origin main || true
