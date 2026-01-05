@@ -1,0 +1,24 @@
+name: Verify archive files
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sjekk ut repo
+        uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Kjør verifiseringsscript
+        run: |
+          python tools/verify_archive_years.py
