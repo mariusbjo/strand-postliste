@@ -65,16 +65,15 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          cache: "pip"
 
-      - name: Installer Playwright + dependencies (cached)
+      - name: Playwright cache
         uses: actions/cache@v4
         id: cache-playwright
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-v1
 
-      - name: Installer Playwright
+      - name: Installer Playwright + dependencies
         run: |
           python -m pip install --upgrade pip
           pip install playwright beautifulsoup4
@@ -116,7 +115,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Gjenbruk Playwright-cache
         uses: actions/cache@v4
@@ -180,7 +178,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Gjenbruk Playwright-cache
         uses: actions/cache@v4
