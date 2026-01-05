@@ -1,19 +1,21 @@
 from playwright.sync_api import sync_playwright
-from datetime import datetime
-import argparse
+import json, os, time, argparse
+from datetime import datetime, date
 
-from utils_dates import parse_cli_date, parse_date_from_page, within_range
-from utils_files import ensure_directories, load_config, load_existing, merge_and_save
-from scraper_core import hent_side
+from utils_dates import parse_cli_date, parse_date_from_page, within_range, format_date
+from utils_files import ensure_directories, load_config, load_existing, merge_and_save, atomic_write
+from scraper_core import hent_side  # bruker den modulære hent_side
 
 CONFIG_FILE = "../config/config.json"
 DATA_FILE = "../../data/postliste.json"
+FILTERED_FILE = "../../data/postliste_filtered.json"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", default=CONFIG_FILE)
 parser.add_argument("start_date", nargs="?")
 parser.add_argument("end_date", nargs="?")
 args = parser.parse_args()
+
 
 def main(start_date=None, end_date=None):
     print("[INFO] Starter scraper_dates…")
@@ -35,7 +37,9 @@ def main(start_date=None, end_date=None):
 
         for page_num in range(start_page, max_pages + 1):
             docs = hent_side(page_num, browser, per_page)
+
             if not docs:
+                print(f"[INFO] Ingen dokumenter på side {page_num}. Stopper.")
                 break
 
             for d in docs:
@@ -51,7 +55,13 @@ def main(start_date=None, end_date=None):
         browser.close()
 
     print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
+
+    # Lagre filtrerte resultater separat (H1/H2)
+    atomic_write(FILTERED_FILE, all_docs)
+
+    # Oppdater hoveddatasettet (incremental scraper bruker dette)
     merge_and_save(existing, all_docs, DATA_FILE)
+
 
 if __name__ == "__main__":
     sd = args.start_date
