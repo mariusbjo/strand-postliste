@@ -21,24 +21,17 @@ FILTERED_FILE = "../../data/postliste_filtered.json"
 
 
 def parse_cli_date(value):
-    """Støtter både YYYY-MM-DD og DD.MM.YYYY."""
+    """
+    Forventer DD.MM.YYYY fra workflow-input.
+    Konverterer til Python date-objekt.
+    """
     if not value:
         return None
-
-    # Format 1: YYYY-MM-DD
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").date()
-    except:
-        pass
-
-    # Format 2: DD.MM.YYYY
     try:
         return datetime.strptime(value, "%d.%m.%Y").date()
-    except:
-        pass
-
-    print(f"[WARN] Klarte ikke parse dato: {value}")
-    return None
+    except Exception:
+        print(f"[WARN] Klarte ikke parse dato (forventet DD.MM.YYYY): {value}")
+        return None
 
 
 def run_scrape(start_date=None, end_date=None, config_path=DEFAULT_CONFIG_FILE, mode="publish"):
