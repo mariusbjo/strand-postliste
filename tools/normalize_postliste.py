@@ -5,6 +5,18 @@ from pathlib import Path
 POSTLISTE_PATH = Path("data/postliste.json")
 BACKUP_PATH = Path("data/postliste_backup_before_normalize.json")
 
+REQUIRED_FIELDS = [
+    "tittel",
+    "dato",
+    "dato_iso",
+    "dokumentID",
+    "dokumenttype",
+    "avsender_mottaker",
+    "journal_link",
+    "filer",
+    "status",
+]
+
 def parse_date(dato_str):
     """Prøver å parse dato i format DD.MM.YYYY."""
     try:
@@ -15,14 +27,24 @@ def parse_date(dato_str):
 def normalize_entry(entry):
     changed = False
 
-    # 1. Fjern parsed_date hvis den finnes
-    if "parsed_date" in entry:
-        del entry["parsed_date"]
+    # 1. Fjern felter som ikke skal være der
+    for unwanted in ["parsed_date", "side", "detalj_link"]:
+        if unwanted in entry:
+            del entry[unwanted]
+            changed = True
+
+    # 2. Sikre at journal_link finnes (kan ha vært detalj_link)
+    if "journal_link" not in entry:
+        entry["journal_link"] = ""
         changed = True
 
-    # 2. Sikre at "dato" finnes
+    # 3. Sikre at filer er en liste
+    if not isinstance(entry.get("filer"), list):
+        entry["filer"] = []
+        changed = True
+
+    # 4. Sikre at dato finnes
     if not entry.get("dato"):
-        # Prøv å hente fra dato_iso
         if entry.get("dato_iso"):
             try:
                 d = datetime.strptime(entry["dato_iso"], "%Y-%m-%d").date()
@@ -31,7 +53,7 @@ def normalize_entry(entry):
             except:
                 pass
 
-    # 3. Sikre dato_iso
+    # 5. Sikre dato_iso
     if not entry.get("dato_iso"):
         if entry.get("dato"):
             d = parse_date(entry["dato"])
@@ -39,12 +61,21 @@ def normalize_entry(entry):
                 entry["dato_iso"] = d.strftime("%Y-%m-%d")
                 changed = True
 
-    # 4. Valider dato_iso
+    # 6. Valider dato_iso
     try:
         datetime.strptime(entry["dato_iso"], "%Y-%m-%d")
     except:
         entry["dato_iso"] = None
         changed = True
+
+    # 7. Sikre at alle REQUIRED_FIELDS finnes
+    for field in REQUIRED_FIELDS:
+        if field not in entry:
+            if field == "filer":
+                entry[field] = []
+            else:
+                entry[field] = ""
+            changed = True
 
     return changed
 
