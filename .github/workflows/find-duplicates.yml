@@ -1,0 +1,25 @@
+name: Find duplicates in postliste.json
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  find_duplicates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sjekk ut repo
+        uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Kjør duplikatfinner
+        run: |
+          echo "=== Søker etter duplikater i postliste.json ==="
+          python tools/find_duplicates.py
