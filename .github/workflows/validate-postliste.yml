@@ -1,0 +1,25 @@
+name: Validate postliste.json
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sjekk ut repo
+        uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Kjør validator
+        run: |
+          echo "=== Starter validering av postliste.json ==="
+          python tools/validate_postliste.py
