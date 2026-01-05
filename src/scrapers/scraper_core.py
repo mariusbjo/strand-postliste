@@ -1,5 +1,5 @@
 import time
-from utils_playwright import safe_goto, safe_text
+from utils_playwright import safe_text
 from utils_dates import parse_date_from_page, format_date
 
 BASE_URL = (
@@ -14,22 +14,34 @@ def hent_side(page_num, browser, per_page):
 
     page = browser.new_page()
 
-    if not safe_goto(page, url):
-        page.close()
-        return []
-
+    # Ny robust goto
     try:
-        page.wait_for_selector("article.bc-content-teaser--item", timeout=15000)
-    except:
-        print(f"[WARN] Ingen artikler på side {page_num}, prøver igjen...")
-        time.sleep(2)
-        if not safe_goto(page, url):
+        page.goto(url, timeout=60000, wait_until="networkidle")
+    except Exception as e:
+        print(f"[WARN] Første goto feilet: {e}")
+        time.sleep(3)
+        try:
+            page.goto(url, timeout=60000, wait_until="networkidle")
+        except Exception as e2:
+            print(f"[ERROR] Side {page_num} feilet to ganger: {e2}")
             page.close()
             return []
+
+    # Ekstra fallback-wait
+    page.wait_for_timeout(2000)
+
+    # Økt timeout for selector
+    try:
+        page.wait_for_selector("article.bc-content-teaser--item", timeout=45000)
+    except Exception:
+        print(f"[WARN] Ingen artikler funnet på side {page_num}, prøver igjen...")
+        time.sleep(3)
         try:
-            page.wait_for_selector("article.bc-content-teaser--item", timeout=15000)
-        except:
-            print(f"[ERROR] Side {page_num} feilet to ganger.")
+            page.goto(url, timeout=60000, wait_until="networkidle")
+            page.wait_for_timeout(2000)
+            page.wait_for_selector("article.bc-content-teaser--item", timeout=45000)
+        except Exception:
+            print(f"[ERROR] Side {page_num} feilet to ganger. Hopper over.")
             page.close()
             return []
 
@@ -47,13 +59,13 @@ def hent_side(page_num, browser, per_page):
         tittel = safe_text(art, ".bc-content-teaser-title-text")
         dato_raw = safe_text(art, ".bc-content-teaser-meta-property--dato dd")
         parsed = parse_date_from_page(dato_raw)
+
         doktype = safe_text(art, ".SakListItem_sakListItemTypeText__16759c")
         avsender = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
         mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
 
         am = f"Avsender: {avsender}" if avsender else (f"Mottaker: {mottaker}" if mottaker else "")
 
-        # Detaljlenke
         detalj_link = ""
         try:
             link_elem = art.evaluate_handle("node => node.closest('a')")
@@ -64,21 +76,20 @@ def hent_side(page_num, browser, per_page):
         if detalj_link and not detalj_link.startswith("http"):
             detalj_link = "https://www.strand.kommune.no" + detalj_link
 
-        # Filer
         filer = []
         if detalj_link:
             dp = browser.new_page()
-            if safe_goto(dp, detalj_link):
-                time.sleep(1)
-                try:
-                    for fl in dp.query_selector_all("a"):
-                        href = fl.get_attribute("href")
-                        tekst = fl.inner_text()
-                        if href and "/api/presentation/v2/nye-innsyn/filer" in href:
-                            abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
-                            filer.append({"tekst": (tekst or "").strip(), "url": abs_url})
-                except Exception as e:
-                    print(f"[WARN] Klarte ikke hente filer for {dokid}: {e}")
+            try:
+                dp.goto(detalj_link, timeout=60000, wait_until="networkidle")
+                dp.wait_for_timeout(1000)
+                for fl in dp.query_selector_all("a"):
+                    href = fl.get_attribute("href")
+                    tekst = fl.inner_text()
+                    if href and "/api/presentation/v2/nye-innsyn/filer" in href:
+                        abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
+                        filer.append({"tekst": (tekst or "").strip(), "url": abs_url})
+            except Exception as e:
+                print(f"[WARN] Klarte ikke hente filer for {dokid}: {e}")
             dp.close()
 
         status = "Publisert" if filer else "Må bes om innsyn"
