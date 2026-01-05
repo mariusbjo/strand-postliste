@@ -1,0 +1,45 @@
+name: Fix archive files
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sjekk ut repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Kjør fix-script
+        run: |
+          python tools/fix_archive_years.py
+
+      - name: Commit og push rensede filer
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+          git add data/archive/*.json
+          git commit -m "Renset arkivfiler (fjernet feil årstall)" || echo "Ingen endringer å committe"
+
+          git stash --include-untracked || true
+          git pull --rebase --autostash origin main || true
+          git stash pop || true
+
+          for i in {1..5}; do
+            git push origin main && break
+            echo "Push feilet, prøver igjen ($i/5)..."
+            git pull --rebase --autostash origin main || true
+          done
