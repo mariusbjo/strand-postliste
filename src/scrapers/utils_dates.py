@@ -14,19 +14,20 @@ def parse_date_from_page(s):
     except:
         return None
 
+
 def parse_cli_date(s):
-    """Datoer fra workflow-input (DD.MM.YYYY eller YYYY-MM-DD)."""
+    """Datoer fra workflow-input (forventer DD.MM.YYYY)."""
     if not s:
         return None
-    for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(s, fmt).date()
-        except:
-            pass
-    raise ValueError(f"Ugyldig datoformat: {s}. Bruk DD.MM.YYYY")
+    try:
+        return datetime.strptime(s, "%d.%m.%Y").date()
+    except:
+        raise ValueError(f"Ugyldig datoformat: {s}. Bruk DD.MM.YYYY")
+
 
 def format_date(d):
     return d.strftime("%d.%m.%Y") if d else ""
+
 
 def within_range(d, start_date, end_date):
     if not d:
