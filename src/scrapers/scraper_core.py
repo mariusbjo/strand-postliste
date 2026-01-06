@@ -1,99 +1,91 @@
-import time
-from utils_playwright import safe_text
-from utils_dates import parse_date_from_page, format_date
+from playwright.sync_api import sync_playwright
+import argparse
+from datetime import datetime
+from utils_dates import parse_date_from_page, within_range
+from utils_files import ensure_directories, load_config, load_existing, merge_and_save, atomic_write
+from scraper_core import hent_side
 
-BASE_URL = (
-    "https://www.strand.kommune.no/tjenester/politikk-innsyn-og-medvirkning/"
-    "postliste-dokumenter-og-vedtak/sok-i-post-dokumenter-og-saker/#/"
-    "?page={page}&pageSize={page_size}"
-)
+DEFAULT_CONFIG_FILE = "../config/config.json"
+DATA_FILE = "../../data/postliste.json"
+FILTERED_FILE = "../../data/postliste_filtered.json"
 
-def hent_side(page_num, browser, per_page, retries=5):
-    url = BASE_URL.format(page=page_num, page_size=per_page)
+def parse_cli_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%d.%m.%Y").date()
+    except:
+        print(f"[WARN] Klarte ikke parse dato (forventet DD.MM.YYYY): {value}")
+        return None
 
-    for attempt in range(1, retries + 1):
-        print(f"[INFO] Åpner side {page_num} (forsøk {attempt}/{retries}): {url}")
+def run_scrape(start_date=None, end_date=None, config_path=DEFAULT_CONFIG_FILE, mode="publish"):
+    print(f"[INFO] Starter scraper_dates i modus='{mode}'…")
 
-        try:
-            page = browser.new_page()
-            page.goto(url, timeout=60000, wait_until="networkidle")
-            page.wait_for_timeout(1500)
+    ensure_directories()
+    cfg = load_config(config_path)
 
-            # Vent på artikler
-            page.wait_for_selector("article.bc-content-teaser--item", timeout=45000)
+    start_page = int(cfg.get("start_page"))
+    max_pages = int(cfg.get("max_pages"))
+    per_page = int(cfg.get("per_page"))
 
-            artikler = page.query_selector_all("article.bc-content-teaser--item")
-            print(f"[INFO] Fant {len(artikler)} dokumenter på side {page_num}")
+    step = 1 if max_pages > start_page else -1
 
-            docs = []
+    print("[INFO] Konfigurasjon:")
+    print(f"       start_page = {start_page}")
+    print(f"       max_pages  = {max_pages}")
+    print(f"       step       = {step}")
+    print(f"       per_page   = {per_page}")
+    print(f"       start_date = {start_date}")
+    print(f"       end_date   = {end_date}")
 
-            for art in artikler:
-                dokid = safe_text(art, ".bc-content-teaser-meta-property--dokumentID dd")
-                if not dokid:
-                    continue
+    all_docs = []
 
-                tittel = safe_text(art, ".bc-content-teaser-title-text")
-                dato_raw = safe_text(art, ".bc-content-teaser-meta-property--dato dd")
-                parsed = parse_date_from_page(dato_raw)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
 
-                doktype = safe_text(art, ".SakListItem_sakListItemTypeText__16759c")
-                avsender = safe_text(art, ".bc-content-teaser-meta-property--avsender dd")
-                mottaker = safe_text(art, ".bc-content-teaser-meta-property--mottaker dd")
+        for page_num in range(start_page, max_pages + step, step):
+            docs = hent_side(page_num, browser, per_page)
 
-                am = f"Avsender: {avsender}" if avsender else (f"Mottaker: {mottaker}" if mottaker else "")
+            if docs is None:
+                print(f"[WARN] Hopper over side {page_num} pga. feil.")
+                continue
 
-                detalj_link = ""
-                try:
-                    link_elem = art.evaluate_handle("node => node.closest('a')")
-                    detalj_link = link_elem.get_attribute("href") if link_elem else ""
-                except:
-                    pass
+            for d in docs:
+                parsed_date = parse_date_from_page(d.get("dato"))
+                if within_range(parsed_date, start_date, end_date):
+                    all_docs.append(d)
 
-                if detalj_link and not detalj_link.startswith("http"):
-                    detalj_link = "https://www.strand.kommune.no" + detalj_link
+            parsed_dates = [parse_date_from_page(x.get("dato")) for x in docs if x.get("dato")]
 
-                filer = []
-                if detalj_link:
-                    dp = browser.new_page()
-                    try:
-                        dp.goto(detalj_link, timeout=60000, wait_until="networkidle")
-                        dp.wait_for_timeout(1000)
-                        for fl in dp.query_selector_all("a"):
-                            href = fl.get_attribute("href")
-                            tekst = fl.inner_text()
-                            if href and "/api/presentation/v2/nye-innsyn/filer" in href:
-                                abs_url = href if href.startswith("http") else "https://www.strand.kommune.no" + href
-                                filer.append({"tekst": (tekst or "").strip(), "url": abs_url})
-                    except Exception as e:
-                        print(f"[WARN] Klarte ikke hente filer for {dokid}: {e}")
-                    dp.close()
+            if start_date and parsed_dates:
+                if all(x and x < start_date for x in parsed_dates):
+                    print("[INFO] Tidlig stopp: alle datoer på denne siden er eldre enn start_date")
+                    break
 
-                status = "Publisert" if filer else "Må bes om innsyn"
+        browser.close()
 
-                docs.append({
-                    "tittel": tittel,
-                    "dato": format_date(parsed),
-                    "dato_iso": parsed.isoformat() if parsed else None,
-                    "dokumentID": dokid,
-                    "dokumenttype": doktype,
-                    "avsender_mottaker": am,
-                    "journal_link": detalj_link,
-                    "filer": filer,
-                    "status": status
-                })
+    print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
+    atomic_write(FILTERED_FILE, all_docs)
 
-            page.close()
-            return docs
+    if mode == "publish":
+        existing = load_existing(DATA_FILE)
+        merge_and_save(existing, all_docs, DATA_FILE)
+    else:
+        print("[INFO] FULL-modus: Oppdaterer ikke postliste.json")
 
-        except Exception as e:
-            print(f"[WARN] Feil ved lasting av side {page_num}: {e}")
-            time.sleep(2)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default=DEFAULT_CONFIG_FILE)
+    parser.add_argument("--mode", default="publish", choices=["full", "publish"])
+    parser.add_argument("start_date")
+    parser.add_argument("end_date")
 
-        finally:
-            try:
-                page.close()
-            except:
-                pass
+    args = parser.parse_args()
 
-    print(f"[ERROR] Side {page_num} feilet etter {retries} forsøk.")
-    return None
+    start_date = parse_cli_date(args.start_date)
+    end_date = parse_cli_date(args.end_date)
+
+    run_scrape(start_date, end_date, args.config, args.mode)
+
+if __name__ == "__main__":
+    main()
