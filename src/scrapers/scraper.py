@@ -13,22 +13,28 @@ from utils_files import (
 from scraper_core_incremental import hent_side_incremental
 from scraper_changes import detect_changes, build_change_entry
 
-CONFIG_FILE = "src/config/config.json"
-DATA_FILE = "data/postliste.json"
-CHANGES_FILE = "data/changes.json"
+# Paths are relative to working-directory: src/scrapers
+CONFIG_FILE = "../config/config.json"
+DATA_FILE = "../../data/postliste.json"
+CHANGES_FILE = "../../data/changes.json"
+
 
 def main():
     print("[INFO] Starter scraper…")
 
     ensure_directories()
-    config = load_config()
+
+    # Load config with explicit path
+    config = load_config(CONFIG_FILE)
 
     mode = config.get("mode", "incremental")
     max_pages = int(config.get(f"max_pages_{mode}", 50))
 
     print(f"[INFO] Modus: {mode}, max_pages: {max_pages}")
+    print(f"[INFO] Leser config fra: {CONFIG_FILE}")
 
-    existing = load_existing()
+    # Load existing data and changes with explicit paths
+    existing = load_existing(DATA_FILE)
     updated = dict(existing)
     changes = load_changes()
 
@@ -57,7 +63,7 @@ def main():
 
                 updated[doc_id] = d
 
-            # Incremental stop
+            # Incremental stop condition
             if mode == "incremental":
                 known = sum(1 for d in docs if d["dokumentID"] in existing)
                 if known == len(docs):
@@ -66,8 +72,8 @@ def main():
 
         browser.close()
 
-    # Merge og lagre
-    latest_existing = load_existing()
+    # Merge and save
+    latest_existing = load_existing(DATA_FILE)
     latest_existing.update(updated)
 
     def sort_key(x):
@@ -82,6 +88,7 @@ def main():
 
     print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
     print(f"[INFO] Logget {len(changes)} endringshendelser i {CHANGES_FILE}")
+
 
 if __name__ == "__main__":
     main()
