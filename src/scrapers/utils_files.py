@@ -9,14 +9,15 @@ CHANGES_FILE = "../../data/changes.json"
 
 
 def ensure_directories():
-    os.makedirs(DATA_DIR, exist_ok=True)
+    Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
 
 
 def ensure_file(path, default):
     """Oppretter fil med default-innhold hvis den ikke finnes."""
-    if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(default, f, ensure_ascii=False, indent=2)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_text(json.dumps(default, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_config(path):
@@ -26,8 +27,7 @@ def load_config(path):
         "max_pages": 100,
         "per_page": 100
     })
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def load_existing(path):
@@ -37,21 +37,22 @@ def load_existing(path):
     """
     ensure_file(path, [])
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if not isinstance(data, list):
-                return {}
-            return {d["dokumentID"]: d for d in data if isinstance(d, dict)}
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            return {}
+        return {d["dokumentID"]: d for d in data if isinstance(d, dict)}
     except Exception:
         return {}
 
 
 def atomic_write(path, data):
     """Skriver JSON atomisk for å unngå korrupte filer."""
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
 
 def merge_and_save(existing, new_docs, path):
@@ -98,6 +99,8 @@ def load_changes():
 def save_changes(changes):
     """Lagrer endringslogg til changes.json."""
     path = Path(CHANGES_FILE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
     path.write_text(
         json.dumps(changes, ensure_ascii=False, indent=2),
         encoding="utf-8"
