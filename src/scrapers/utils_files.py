@@ -3,7 +3,7 @@ import json
 from datetime import datetime, date
 from pathlib import Path
 
-# Standard paths used by scraper.py
+# Standard paths used av scraper.py
 DATA_DIR = "../../data"
 CHANGES_FILE = "data/changes.json"
 
@@ -42,7 +42,7 @@ def load_existing(path):
             if not isinstance(data, list):
                 return {}
             return {d["dokumentID"]: d for d in data if isinstance(d, dict)}
-    except:
+    except Exception:
         return {}
 
 
@@ -61,10 +61,19 @@ def merge_and_save(existing, new_docs, path):
         updated[d["dokumentID"]] = d
 
     def sort_key(x):
-        try:
-            return datetime.strptime(x.get("dato"), "%d.%m.%Y").date()
-        except:
-            return date.min
+        # Prøv dato_iso (ISO-format) først, deretter dato (DD.MM.YYYY), ellers date.min
+        for key in ("dato_iso", "dato"):
+            v = x.get(key)
+            if not v:
+                continue
+            try:
+                if key == "dato_iso":
+                    return datetime.fromisoformat(v).date()
+                else:
+                    return datetime.strptime(v, "%d.%m.%Y").date()
+            except Exception:
+                continue
+        return date.min
 
     data_list = sorted(updated.values(), key=sort_key, reverse=True)
     atomic_write(path, data_list)
@@ -72,8 +81,7 @@ def merge_and_save(existing, new_docs, path):
 
 
 # ---------------------------------------------------------
-#   NYE FUNKSJONER: load_changes() og save_changes()
-#   Disse trengs av scraper.py (incremental update scraper)
+#   Endringslogg-funksjoner for incremental scraper
 # ---------------------------------------------------------
 
 def load_changes():
@@ -83,7 +91,7 @@ def load_changes():
         return []
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except:
+    except Exception:
         return []
 
 
