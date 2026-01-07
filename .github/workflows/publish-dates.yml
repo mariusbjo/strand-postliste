@@ -54,6 +54,16 @@ jobs:
           pip install playwright beautifulsoup4
           playwright install chromium
 
+      # --- AUTOMATISK MIGRERING HVIS LEGACY-FIL FINNES ---
+      - name: Migrer postliste.json til shards (hvis nødvendig)
+        run: |
+          if [ -f data/postliste.json ]; then
+            echo "[INFO] Legacy postliste.json funnet – migrerer til shards..."
+            python tools/migrate_postliste_json_to_shards.py
+          else
+            echo "[INFO] Ingen legacy postliste.json – hopper over migrering."
+          fi
+
       - name: Skriv config_dates.json basert på input
         run: |
           mkdir -p src/config
@@ -78,6 +88,14 @@ jobs:
             "${{ github.event.inputs.start_date }}" \
             "${{ github.event.inputs.end_date }}"
 
+      # --- GIT REMOTE ---
+      - name: Sett opp git remote
+        run: |
+          git remote remove origin || true
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote -v
+
+      # --- COMMIT & PUSH ---
       - name: Commit og push oppdateringer (konkurransesikker)
         run: |
           git config --global user.name "${{ github.actor }}"
@@ -86,10 +104,17 @@ jobs:
           echo "=== Endringer i data/ ==="
           git status data/
 
-          git add data/postliste.json || true
+          # Shard-filer
+          git add data/postliste_*.json || true
+          git add data/postliste_index.json || true
+
+          # Endringslogg
           git add data/changes.json || true
 
-          git commit -m "Oppdatert postliste via publish-dates workflow" || echo "Ingen endringer å committe"
+          # Slett legacy hvis den fortsatt finnes
+          git rm data/postliste.json || true
+
+          git commit -m "Oppdatert postliste via publish-dates workflow (sharded)" || echo "Ingen endringer å committe"
 
           git stash --include-untracked || true
           git pull --rebase --autostash origin main || true
