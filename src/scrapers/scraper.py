@@ -4,38 +4,32 @@ from datetime import datetime, date
 from utils_files import (
     ensure_directories,
     load_config,
-    load_existing,
+    load_all_postliste,
     load_changes,
-    atomic_write,
-    save_changes
+    save_changes,
+    merge_and_save_sharded,
 )
 
 from scraper_core_incremental import hent_side_incremental
 from scraper_changes import detect_changes, build_change_entry
 
-# Paths are relative to working-directory: src/scrapers
 CONFIG_FILE = "../config/config.json"
-DATA_FILE = "../../data/postliste.json"
-CHANGES_FILE = "../../data/changes.json"
 
 
 def main():
-    print("[INFO] Starter scraper…")
+    print("[INFO] Starter incremental scraper…")
 
     ensure_directories()
-
-    # Load config with explicit path
     config = load_config(CONFIG_FILE)
 
     mode = config.get("mode", "incremental")
     max_pages = int(config.get(f"max_pages_{mode}", 50))
 
     print(f"[INFO] Modus: {mode}, max_pages: {max_pages}")
-    print(f"[INFO] Leser config fra: {CONFIG_FILE}")
 
-    # Load existing data and changes with explicit paths
-    existing = load_existing(DATA_FILE)
-    updated = dict(existing)
+    # Last ALLE shards
+    existing_dict, _all_existing_list = load_all_postliste()
+    updated = dict(existing_dict)
     changes = load_changes()
 
     with sync_playwright() as p:
@@ -64,30 +58,18 @@ def main():
                 updated[doc_id] = d
 
             # Incremental stop condition
-            if mode == "incremental":
-                known = sum(1 for d in docs if d["dokumentID"] in existing)
-                if known == len(docs):
-                    print("[INFO] Incremental: alle dokumenter på denne siden er kjente. Stopper.")
-                    break
+            known = sum(1 for d in docs if d["dokumentID"] in existing_dict)
+            if known == len(docs):
+                print("[INFO] Incremental: alle dokumenter på denne siden er kjente. Stopper.")
+                break
 
         browser.close()
 
-    # Merge and save
-    latest_existing = load_existing(DATA_FILE)
-    latest_existing.update(updated)
-
-    def sort_key(x):
-        try:
-            return datetime.strptime(x.get("dato"), "%d.%m.%Y").date()
-        except:
-            return date.min
-
-    data_list = sorted(latest_existing.values(), key=sort_key, reverse=True)
-    atomic_write(DATA_FILE, data_list)
+    # Lagre til shards
+    merge_and_save_sharded(existing_dict, list(updated.values()))
     save_changes(changes)
 
-    print(f"[INFO] Lagret JSON med {len(data_list)} dokumenter")
-    print(f"[INFO] Logget {len(changes)} endringshendelser i {CHANGES_FILE}")
+    print(f"[INFO] Incremental scraper ferdig.")
 
 
 if __name__ == "__main__":
