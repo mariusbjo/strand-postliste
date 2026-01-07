@@ -42,7 +42,7 @@ function changePerPage() {
   if (el && el.value) {
     const newVal = parseInt(el.value, 10);
     if (!isNaN(newVal)) {
-      perPage = newVal; // perPage er definert i template.html
+      window.perPage = newVal;   // <-- OPPDATERT
     }
   }
   setPage(1);
