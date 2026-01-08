@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       start_date:
-        description: "Startdato (YYYY-MM-DD)"
+        description: "Startdato (DD.MM.YYYY)"
         required: true
       end_date:
-        description: "Sluttdato (YYYY-MM-DD)"
+        description: "Sluttdato (DD.MM.YYYY)"
         required: false
       start_page:
         description: "Start side"
