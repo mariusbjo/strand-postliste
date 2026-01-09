@@ -67,8 +67,8 @@ jobs:
           python scraper_dates.py \
             --mode repair \
             --config ../config/config_repair.json \
-            "${YEAR}-01-01" \
-            "${YEAR}-12-31"
+            "01.01.${YEAR}" \
+            "31.12.${YEAR}"
 
       - name: Flytt missing-fil til archive
         run: |
