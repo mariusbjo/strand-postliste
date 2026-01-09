@@ -9,7 +9,7 @@ from utils_files import (
     merge_and_save_sharded,
     atomic_write,
 )
-from scraper_core_async import hent_side_async  # <-- ny async-versjon
+from scraper_core_async import hent_side_async
 
 DEFAULT_CONFIG_FILE = "../config/config.json"
 FILTERED_FILE = "../../data/postliste_filtered.json"
@@ -24,7 +24,6 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
     start_page = int(cfg.get("start_page", 1))
     max_pages = int(cfg.get("max_pages", 100))
     per_page = int(cfg.get("per_page", 100))
-
     step = 1 if max_pages > start_page else -1
 
     print("[INFO] Konfigurasjon:")
@@ -52,15 +51,14 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
 
         context = await browser.new_context()
 
-        # Blokker unødvendige ressurser
-        await context.route(
-            "**/*",
-            lambda route: (
-                asyncio.create_task(route.abort())
-                if route.request.resource_type in ["image", "font", "stylesheet", "media"]
-                else asyncio.create_task(route.continue_())
-            ),
-        )
+        # Raskere og tryggere resource-blocking
+        async def block_resources(route):
+            if route.request.resource_type in ["image", "font", "stylesheet", "media"]:
+                await route.abort()
+            else:
+                await route.continue_()
+
+        await context.route("**/*", block_resources)
 
         page = await context.new_page()
 
@@ -99,6 +97,7 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
                 print("[INFO] Tidlig stopp: alle dokumenter på siden er eldre enn start_date")
                 break
 
+        await context.close()
         await browser.close()
 
     print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
