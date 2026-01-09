@@ -1,4 +1,4 @@
-name: Full historical scrape
+name: Full historical scrape (H1–H2)
 
 on:
   workflow_dispatch:
@@ -9,12 +9,12 @@ on:
         type: string
 
       start_page:
-        description: "Start page (f.eks. 3475)"
+        description: "Start page (eldste side for året)"
         required: true
         type: string
 
       max_pages:
-        description: "Max pages (f.eks. 3505)"
+        description: "Max page (nyeste side for året)"
         required: true
         type: string
 
@@ -42,7 +42,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: postliste-fullscrape
+  group: fullscrape-h1-h2
   cancel-in-progress: false
 
 jobs:
@@ -130,7 +130,7 @@ jobs:
             "data/archive/postliste_${{ github.event.inputs.year }}_H2.json"
 
       # -------------------------
-      # COMMIT & PUSH (kun én gang)
+      # COMMIT & PUSH (kun archive/)
       # -------------------------
       - name: Commit og push begge filer
         run: |
