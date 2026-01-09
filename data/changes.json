@@ -97578,5 +97578,197 @@
         "ny": 1
       }
     }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/39",
+    "tittel": "Melding om vedtak - 47/488 Dispensasjon og rammetillatelse - tilbygg - Marmorsvingen 6A - Alf Christian Hansen",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 2,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/142",
+    "tittel": "53/104 Spørsmål til dispensasjon fra reguleringsplan - Runnane 3",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 1,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/132",
+    "tittel": "53/161 Søknad om ferdigattest - tilbygg - Jøssangvegen 146 - Hilde Lise Hammonds",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 11,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/227",
+    "tittel": "Fellingsrapport for rådyr 2025",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 2,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/118",
+    "tittel": "Innsyn i avtaler - purring",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 1,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/163",
+    "tittel": "Kveldsbeleika - eierskap",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 1,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/101",
+    "tittel": "47/101 Ferdigattest - tilbygg - Tulipanvegen 15a - Thomas Mahari-Neguse",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 2,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/67",
+    "tittel": "11/4 Tilbakemelding på forhåndsvarsel - bruk av naust - Kjølevikvegen 15",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 1,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/174",
+    "tittel": "16/86 Begjæring om sletting av seksjonering",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 2,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/156",
+    "tittel": "49/147 49/153 Tillatelse til tiltak - Riving av eneboliger - Rådhusgaten 4A og Stålverksvegen 5 - Strand kommune",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 1,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2026/165",
+    "tittel": "Kveldsbeleika - rapport og midlertidig sikring",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 1,
+        "ny": 0
+      }
+    }
+  },
+  {
+    "tidspunkt": "2026-01-09 06:47:47",
+    "type": "UPDATE",
+    "dokumentID": "2025/42520",
+    "tittel": "Tilbakemelding om sauna",
+    "endringer": {
+      "status": {
+        "gammel": "Publisert",
+        "ny": "Må bes om innsyn"
+      },
+      "filer_count": {
+        "gammel": 1,
+        "ny": 0
+      }
+    }
   }
 ]
