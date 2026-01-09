@@ -21,15 +21,14 @@ on:
 permissions:
   contents: write
 
-# EGEN concurrency-gruppe slik at fullscrape IKKE står i kø
 concurrency:
-  group: fullscrape-${{ github.ref }}
+  group: fullscrape-q1-q4
   cancel-in-progress: false
 
 jobs:
 
   # -------------------------
-  # Felles setup for alle kvartaler
+  # SETUP (felles for alle kvartaler)
   # -------------------------
   setup:
     runs-on: ubuntu-latest
@@ -41,17 +40,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - name: Sett opp Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # Playwright cache fjernet for async-stabilitet
+      - name: Playwright cache
+        uses: actions/cache@v4
+        id: cache-playwright
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-v1
 
-      - name: Installer Playwright + dependencies (async)
+      - name: Installer Playwright + dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install playwright==1.44.0
-          pip install beautifulsoup4
+          pip install playwright beautifulsoup4
           playwright install chromium
 
       - name: Skriv config_fullscrape.json
@@ -66,7 +70,7 @@ jobs:
           EOF
 
   # -------------------------
-  # Q1 SCRAPE
+  # KVARTALSMAL (gjenbrukes)
   # -------------------------
   scrape_Q1:
     runs-on: ubuntu-latest
@@ -74,18 +78,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
 
-      - name: Installer Playwright + dependencies (async)
-        run: |
-          python -m pip install --upgrade pip
-          pip install playwright==1.44.0
-          pip install beautifulsoup4
-          playwright install chromium
-
-      - name: Kjør Q1-scrape (async)
+      - name: Kjør Q1-scrape
         working-directory: src/scrapers
         run: |
           python scraper_dates.py \
@@ -100,27 +94,14 @@ jobs:
           name: fullscrape-Q1
           path: data/postliste_filtered.json
 
-  # -------------------------
-  # Q2 SCRAPE
-  # -------------------------
   scrape_Q2:
     runs-on: ubuntu-latest
     needs: setup
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
 
-      - name: Installer Playwright + dependencies (async)
-        run: |
-          python -m pip install --upgrade pip
-          pip install playwright==1.44.0
-          pip install beautifulsoup4
-          playwright install chromium
-
-      - name: Kjør Q2-scrape (async)
+      - name: Kjør Q2-scrape
         working-directory: src/scrapers
         run: |
           python scraper_dates.py \
@@ -135,27 +116,14 @@ jobs:
           name: fullscrape-Q2
           path: data/postliste_filtered.json
 
-  # -------------------------
-  # Q3 SCRAPE
-  # -------------------------
   scrape_Q3:
     runs-on: ubuntu-latest
     needs: setup
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
 
-      - name: Installer Playwright + dependencies (async)
-        run: |
-          python -m pip install --upgrade pip
-          pip install playwright==1.44.0
-          pip install beautifulsoup4
-          playwright install chromium
-
-      - name: Kjør Q3-scrape (async)
+      - name: Kjør Q3-scrape
         working-directory: src/scrapers
         run: |
           python scraper_dates.py \
@@ -170,27 +138,14 @@ jobs:
           name: fullscrape-Q3
           path: data/postliste_filtered.json
 
-  # -------------------------
-  # Q4 SCRAPE
-  # -------------------------
   scrape_Q4:
     runs-on: ubuntu-latest
     needs: setup
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
 
-      - name: Installer Playwright + dependencies (async)
-        run: |
-          python -m pip install --upgrade pip
-          pip install playwright==1.44.0
-          pip install beautifulsoup4
-          playwright install chromium
-
-      - name: Kjør Q4-scrape (async)
+      - name: Kjør Q4-scrape
         working-directory: src/scrapers
         run: |
           python scraper_dates.py \
@@ -220,15 +175,16 @@ jobs:
         with:
           path: artifacts
 
-      - name: Arkiver alle kvartaler
+      - name: Arkiver kvartalsfiler
         run: |
           mkdir -p data/archive
-          cp artifacts/fullscrape-Q1/postliste_filtered.json data/archive/postliste_${{ github.event.inputs.year }}_Q1.json
-          cp artifacts/fullscrape-Q2/postliste_filtered.json data/archive/postliste_${{ github.event.inputs.year }}_Q2.json
-          cp artifacts/fullscrape-Q3/postliste_filtered.json data/archive/postliste_${{ github.event.inputs.year }}_Q3.json
-          cp artifacts/fullscrape-Q4/postliste_filtered.json data/archive/postliste_${{ github.event.inputs.year }}_Q4.json
+          YEAR="${{ github.event.inputs.year }}"
+          cp artifacts/fullscrape-Q1/postliste_filtered.json data/archive/postliste_${YEAR}_Q1.json
+          cp artifacts/fullscrape-Q2/postliste_filtered.json data/archive/postliste_${YEAR}_Q2.json
+          cp artifacts/fullscrape-Q3/postliste_filtered.json data/archive/postliste_${YEAR}_Q3.json
+          cp artifacts/fullscrape-Q4/postliste_filtered.json data/archive/postliste_${YEAR}_Q4.json
 
-      - name: Commit og push
+      - name: Commit og push kvartalsfiler
         run: |
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
@@ -239,6 +195,9 @@ jobs:
           git pull --rebase origin main || true
           git push origin main || true
 
+  # -------------------------
+  # LAG FULL ÅRSFIL
+  # -------------------------
   merge_full_year:
     runs-on: ubuntu-latest
     needs: merge_and_commit
