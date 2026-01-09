@@ -11,13 +11,13 @@ BASE_URL = (
 
 async def hent_side_async(page_num, page, per_page, retries=5, timeout=10_000):
     """
-    Asynkron, optimalisert versjon av hent_side():
+    Optimalisert async-versjon av hent_side():
       - Gjenbruker page-instans
       - Navigerer async
-      - Blokkerer unødvendige ressurser (gjøres i context)
       - Raskere detaljvisning
       - Mindre memory leaks
       - Bedre retry-logikk
+      - Mer robust retur til hovedsiden
     """
 
     url = BASE_URL.format(page=page_num, page_size=per_page)
@@ -32,7 +32,7 @@ async def hent_side_async(page_num, page, per_page, retries=5, timeout=10_000):
                 raise RuntimeError("safe_goto feilet")
 
             # Kort pause for rendering
-            await page.wait_for_timeout(200)
+            await page.wait_for_timeout(150)
 
             # Vent på artikler
             try:
@@ -77,7 +77,7 @@ async def hent_side_async(page_num, page, per_page, retries=5, timeout=10_000):
                     if link_elem:
                         detalj_link = await link_elem.get_attribute("href")
                 except Exception:
-                    pass
+                    detalj_link = ""
 
                 if detalj_link and not detalj_link.startswith("http"):
                     detalj_link = "https://www.strand.kommune.no" + detalj_link
@@ -88,7 +88,7 @@ async def hent_side_async(page_num, page, per_page, retries=5, timeout=10_000):
                     try:
                         ok = await safe_goto(page, detalj_link, retries=1, timeout=timeout)
                         if ok:
-                            await page.wait_for_timeout(150)
+                            await page.wait_for_timeout(120)
 
                             links = await page.query_selector_all("a")
                             for fl in links:
@@ -108,7 +108,7 @@ async def hent_side_async(page_num, page, per_page, retries=5, timeout=10_000):
                     finally:
                         # Gå tilbake til hovedsiden
                         await safe_goto(page, url, retries=1, timeout=timeout)
-                        await page.wait_for_timeout(100)
+                        await page.wait_for_timeout(80)
 
                 status = "Publisert" if filer else "Må bes om innsyn"
 
