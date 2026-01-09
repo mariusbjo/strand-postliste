@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import os
 from playwright.async_api import async_playwright
 from utils_dates import parse_date_from_page, within_range, parse_cli_date
 from utils_files import (
@@ -15,10 +16,13 @@ DEFAULT_CONFIG_FILE = "../config/config.json"
 FILTERED_FILE = "../../data/postliste_filtered.json"
 
 
-async def scrape_single_page(context, page_num, per_page, start_date, end_date, semaphore):
+async def scrape_single_page(context, page_num, per_page, start_date, end_date, semaphore, index, total_pages):
     """
     Scraper én side i egen page (SPA-sikker), filtrerer på dato-range og returnerer liste med dokumenter.
+    Logger også progress: 'Scraper side X av Y'.
     """
+    print(f"[INFO] Scraper side {index} av {total_pages} (page_num={page_num})")
+
     async with semaphore:
         page = await context.new_page()
         try:
@@ -57,15 +61,26 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
     per_page = int(cfg.get("per_page", 100))
     step = 1 if max_pages > start_page else -1
 
+    # Antall sider som faktisk skal scrapes
+    total_pages = abs(max_pages - start_page) + 1
+
     print("[INFO] Konfigurasjon:")
-    print(f"       start_page = {start_page}")
-    print(f"       max_pages  = {max_pages}")
-    print(f"       step       = {step}")
-    print(f"       per_page   = {per_page}")
-    print(f"       start_date = {start_date}")
-    print(f"       end_date   = {end_date}")
+    print(f"       start_page  = {start_page}")
+    print(f"       max_pages   = {max_pages}")
+    print(f"       step        = {step}")
+    print(f"       total_pages = {total_pages}")
+    print(f"       per_page    = {per_page}")
+    print(f"       start_date  = {start_date}")
+    print(f"       end_date    = {end_date}")
 
     all_docs = []
+
+    # Dynamisk concurrency basert på CPU
+    cpu_count = os.cpu_count() or 2
+    # Litt konservativ: ikke mer enn 8, ikke mindre enn 2, og ikke over (cpu_count - 1)
+    CONCURRENCY = min(8, max(2, cpu_count - 1))
+
+    print(f"[INFO] CPU-kjerner: {cpu_count}, bruker CONCURRENCY={CONCURRENCY}")
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
@@ -91,12 +106,11 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
 
         await context.route("**/*", block_resources)
 
-        # Hvor mange sider i parallell
-        CONCURRENCY = 8
         semaphore = asyncio.Semaphore(CONCURRENCY)
 
         tasks = []
-        for page_num in range(start_page, max_pages + step, step):
+        # Vi vil ha stabil index 1..total_pages uavhengig av step-retning
+        for idx, page_num in enumerate(range(start_page, max_pages + step, step), start=1):
             tasks.append(
                 scrape_single_page(
                     context=context,
@@ -105,6 +119,8 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
                     start_date=start_date,
                     end_date=end_date,
                     semaphore=semaphore,
+                    index=idx,
+                    total_pages=total_pages,
                 )
             )
 
