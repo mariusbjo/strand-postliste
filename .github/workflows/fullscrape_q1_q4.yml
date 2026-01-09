@@ -234,3 +234,46 @@ jobs:
 
           git pull --rebase origin main || true
           git push origin main || true
+
+  merge_full_year:
+    runs-on: ubuntu-latest
+    needs: merge_and_commit
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Last ned kvartalsfiler
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Slå sammen kvartaler til én fil
+        run: |
+          YEAR="${{ github.event.inputs.year }}"
+          mkdir -p data/archive
+
+          # Slå sammen alle kvartaler
+          jq -s 'add' \
+            artifacts/fullscrape-Q1/postliste_filtered.json \
+            artifacts/fullscrape-Q2/postliste_filtered.json \
+            artifacts/fullscrape-Q3/postliste_filtered.json \
+            artifacts/fullscrape-Q4/postliste_filtered.json \
+            > data/archive/postliste_${YEAR}_full_unsorted.json
+
+          # Sorter etter dato (eldst → nyest)
+          jq 'sort_by(.dato)' \
+            data/archive/postliste_${YEAR}_full_unsorted.json \
+            > data/archive/postliste_${YEAR}_full.json
+
+          rm data/archive/postliste_${YEAR}_full_unsorted.json
+
+      - name: Commit og push full-årsfil
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+          git add data/archive/postliste_${{ github.event.inputs.year }}_full.json
+          git commit -m "Fullscrape ${{ github.event.inputs.year }} – samlet årsfil" || echo "Ingen endringer"
+
+          git pull --rebase origin main || true
+          git push origin main || true
