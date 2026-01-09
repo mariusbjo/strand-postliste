@@ -6,25 +6,96 @@ on:
       year:
         description: "År som skal repareres (f.eks. 2013)"
         required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-year
+  cancel-in-progress: false
 
 jobs:
   repair:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Sjekk ut repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: Set up Python
+      - name: Sett opp Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Playwright cache
+        uses: actions/cache@v4
+        id: cache-playwright
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-v1
 
-      - name: Run repair scraper
+      - name: Installer Playwright + dependencies
         run: |
+          python -m pip install --upgrade pip
+          pip install playwright beautifulsoup4
+          playwright install chromium
+
+      - name: Skriv config_repair.json
+        run: |
+          mkdir -p src/config
+          cat <<EOF > src/config/config_repair.json
+          {
+            "start_page": 1,
+            "max_pages": 9999,
+            "per_page": 100
+          }
+          EOF
+
+          echo "=== INNHOLD I config_repair.json ==="
+          cat src/config/config_repair.json
+
+      - name: Kjør repair-scraper
+        working-directory: src/scrapers
+        run: |
+          YEAR="${{ github.event.inputs.year }}"
+          echo "=== STARTER REPAIR FOR ÅR $YEAR ==="
+
           python scraper_dates.py \
             --mode repair \
-            ${{ github.event.inputs.year }}-01-01 \
-            ${{ github.event.inputs.year }}-12-31
+            --config ../config/config_repair.json \
+            "${YEAR}-01-01" \
+            "${YEAR}-12-31"
+
+      - name: Commit og push manglende dokumenter
+        run: |
+          YEAR="${{ github.event.inputs.year }}"
+
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+          echo "=== Endringer i data/ ==="
+          git status data/
+
+          # Missing-fil
+          git add missing_${YEAR}.json || true
+
+          # Shards som ble oppdatert av repair-modus
+          git add data/postliste_*.json || true
+          git add data/postliste_index.json || true
+          git add data/changes.json || true
+
+          git commit -m "Repair-scrape for år ${YEAR} – la til manglende dokumenter" || echo "Ingen endringer å committe"
+
+          git stash --include-untracked || true
+          git pull --rebase --autostash origin main || true
+          git stash pop || true
+
+          for i in {1..5}; do
+            git push origin main && break
+            echo "Push feilet, prøver igjen ($i/5)..."
+            git pull --rebase --autostash origin main || true
+          done
