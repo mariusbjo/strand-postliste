@@ -1,6 +1,8 @@
 import argparse
 import asyncio
 import os
+import glob
+import json
 from playwright.async_api import async_playwright
 from utils_dates import parse_date_from_page, within_range, parse_cli_date
 from utils_files import (
@@ -16,6 +18,39 @@ DEFAULT_CONFIG_FILE = "../config/config.json"
 FILTERED_FILE = "../../data/postliste_filtered.json"
 
 
+# ---------------------------------------------------------
+# AUTO-DETECT PAGE RANGE FROM ARCHIVE
+# ---------------------------------------------------------
+def detect_page_range_for_year(year):
+    archive_files = glob.glob(f"../../data/archive/postliste_{year}_*.json")
+    pages = []
+
+    print(f"[INFO] Søker etter page_num i archive for år {year}…")
+
+    for f in archive_files:
+        try:
+            with open(f, "r", encoding="utf-8") as infile:
+                docs = json.load(infile)
+                for d in docs:
+                    if "page_num" in d:
+                        pages.append(d["page_num"])
+        except Exception as e:
+            print(f"[WARN] Klarte ikke å lese {f}: {e}")
+
+    if not pages:
+        print(f"[ERROR] Ingen page_num funnet i archive for {year}.")
+        return None, None
+
+    start_page = min(pages)
+    max_page = max(pages)
+
+    print(f"[INFO] Auto-detected page range for {year}: {start_page} → {max_page}")
+    return start_page, max_page
+
+
+# ---------------------------------------------------------
+# SCRAPE SINGLE PAGE
+# ---------------------------------------------------------
 async def scrape_single_page(context, page_num, per_page, start_date, end_date, semaphore, index, total_pages):
     print(f"[INFO] Scraper side {index} av {total_pages} (page_num={page_num})")
 
@@ -46,12 +81,32 @@ async def scrape_single_page(context, page_num, per_page, start_date, end_date, 
         return filtered
 
 
+# ---------------------------------------------------------
+# MAIN SCRAPER
+# ---------------------------------------------------------
 async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_CONFIG_FILE, mode="publish"):
     print(f"[INFO] Starter ASYNC PARALLELL scraper_dates i modus='{mode}'…")
 
     ensure_directories()
     cfg = load_config(config_path)
 
+    # ---------------------------------------------------------
+    # AUTO-DETECT RANGE FOR REPAIR MODE
+    # ---------------------------------------------------------
+    if mode == "repair":
+        year = start_date.year
+        auto_start, auto_end = detect_page_range_for_year(year)
+
+        if auto_start is None:
+            print("[ERROR] Repair avbrytes – ingen page_num funnet i archive.")
+            return
+
+        cfg["start_page"] = auto_start
+        cfg["max_pages"] = auto_end
+
+    # ---------------------------------------------------------
+    # LOAD CONFIG
+    # ---------------------------------------------------------
     start_page = int(cfg.get("start_page", 1))
     max_pages = int(cfg.get("max_pages", 100))
     per_page = int(cfg.get("per_page", 100))
@@ -75,6 +130,9 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
 
     print(f"[INFO] CPU-kjerner: {cpu_count}, bruker CONCURRENCY={CONCURRENCY}")
 
+    # ---------------------------------------------------------
+    # SCRAPING
+    # ---------------------------------------------------------
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
@@ -125,9 +183,9 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
 
     print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
 
-    # -------------------------
-    # REPAIR-MODUS
-    # -------------------------
+    # ---------------------------------------------------------
+    # REPAIR MODE OUTPUT
+    # ---------------------------------------------------------
     if mode == "repair":
         print("[INFO] Repair-modus aktivert. Laster eksisterende datasett…")
         existing_dict, _ = load_all_postliste()
@@ -144,16 +202,12 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
         print(f"[INFO] Fant {len(missing_docs)} manglende dokumenter.")
         atomic_write(missing_file, missing_docs)
 
-        if missing_docs:
-            print("[INFO] Merger manglende dokumenter inn i hoveddatasettet…")
-            merge_and_save_sharded(existing_dict, missing_docs)
-
         print("[INFO] Repair fullført.")
         return
 
-    # -------------------------
-    # NORMAL MODUS
-    # -------------------------
+    # ---------------------------------------------------------
+    # NORMAL MODES
+    # ---------------------------------------------------------
     atomic_write(FILTERED_FILE, all_docs)
 
     if mode == "publish":
