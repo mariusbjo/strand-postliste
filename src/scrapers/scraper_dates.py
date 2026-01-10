@@ -42,7 +42,7 @@ def load_archive_year(year):
 
 
 # ---------------------------------------------------------
-# SCRAPE SINGLE PAGE
+# SCRAPE SINGLE PAGE (with explicit failure return)
 # ---------------------------------------------------------
 async def scrape_single_page(context, page_num, per_page, start_date, end_date, semaphore, index, total_pages):
     print(f"[INFO] Scraper side {index} av {total_pages} (page_num={page_num})")
@@ -57,12 +57,15 @@ async def scrape_single_page(context, page_num, per_page, start_date, end_date, 
                 timeout=20_000,
                 retries=5,
             )
+        except Exception as e:
+            print(f"[WARN] Unntak ved henting av side {page_num}: {e}")
+            return {"failed": page_num}
         finally:
             await page.close()
 
         if not docs:
-            print(f"[INFO] Ingen dokumenter (eller feil) på side {page_num}")
-            return []
+            print(f"[WARN] Side {page_num} feilet eller returnerte ingen dokumenter")
+            return {"failed": page_num}
 
         filtered = []
         for d in docs:
@@ -100,6 +103,7 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
     print(f"       end_date    = {end_date}")
 
     all_docs = []
+    failed_pages = []
 
     cpu_count = os.cpu_count() or 2
     CONCURRENCY = min(6, max(2, cpu_count - 1))
@@ -149,12 +153,16 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
         results = await asyncio.gather(*tasks)
 
         for batch in results:
-            all_docs.extend(batch)
+            if isinstance(batch, dict) and "failed" in batch:
+                failed_pages.append(batch["failed"])
+            else:
+                all_docs.extend(batch)
 
         await context.close()
         await browser.close()
 
     print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
+    print(f"[INFO] Antall feilede sider: {len(failed_pages)}")
 
     # ---------------------------------------------------------
     # REPAIR MODE
@@ -172,9 +180,14 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
                 missing_docs.append(d)
 
         missing_file = f"../../data/archive/missing_{year}.json"
+        failed_file = f"../../data/archive/failed_pages_{year}.json"
 
         print(f"[INFO] Fant {len(missing_docs)} manglende dokumenter.")
         atomic_write(missing_file, missing_docs)
+
+        if failed_pages:
+            print(f"[INFO] Lagrer {len(failed_pages)} feilede sider i {failed_file}")
+            atomic_write(failed_file, failed_pages)
 
         print("[INFO] Repair fullført.")
         return
