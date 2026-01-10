@@ -1,12 +1,13 @@
 import argparse
 import asyncio
 import os
+import glob
+import json
 from playwright.async_api import async_playwright
 from utils_dates import parse_date_from_page, within_range, parse_cli_date
 from utils_files import (
     ensure_directories,
     load_config,
-    load_all_postliste,
     merge_and_save_sharded,
     atomic_write,
 )
@@ -16,6 +17,33 @@ DEFAULT_CONFIG_FILE = "../config/config.json"
 FILTERED_FILE = "../../data/postliste_filtered.json"
 
 
+# ---------------------------------------------------------
+# LOAD ARCHIVE YEAR (instead of shards)
+# ---------------------------------------------------------
+def load_archive_year(year):
+    archive_files = glob.glob(f"../../data/archive/postliste_{year}_*.json")
+    existing = {}
+
+    print(f"[INFO] Leser archive-filer for år {year}…")
+
+    for f in archive_files:
+        try:
+            with open(f, "r", encoding="utf-8") as infile:
+                docs = json.load(infile)
+                for d in docs:
+                    dokid = d.get("dokumentID")
+                    if dokid:
+                        existing[dokid] = d
+        except Exception as e:
+            print(f"[WARN] Klarte ikke å lese {f}: {e}")
+
+    print(f"[INFO] Totalt {len(existing)} dokumenter funnet i archive for {year}")
+    return existing
+
+
+# ---------------------------------------------------------
+# SCRAPE SINGLE PAGE
+# ---------------------------------------------------------
 async def scrape_single_page(context, page_num, per_page, start_date, end_date, semaphore, index, total_pages):
     print(f"[INFO] Scraper side {index} av {total_pages} (page_num={page_num})")
 
@@ -46,6 +74,9 @@ async def scrape_single_page(context, page_num, per_page, start_date, end_date, 
         return filtered
 
 
+# ---------------------------------------------------------
+# MAIN SCRAPER
+# ---------------------------------------------------------
 async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_CONFIG_FILE, mode="publish"):
     print(f"[INFO] Starter ASYNC PARALLELL scraper_dates i modus='{mode}'…")
 
@@ -125,12 +156,14 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
 
     print(f"[INFO] Totalt hentet {len(all_docs)} dokumenter innenfor dato-range.")
 
-    # -------------------------
-    # REPAIR-MODUS
-    # -------------------------
+    # ---------------------------------------------------------
+    # REPAIR MODE
+    # ---------------------------------------------------------
     if mode == "repair":
-        print("[INFO] Repair-modus aktivert. Laster eksisterende datasett…")
-        existing_dict, _ = load_all_postliste()
+        print("[INFO] Repair-modus aktivert. Leser archive…")
+
+        year = start_date.year if start_date else "unknown"
+        existing_dict = load_archive_year(year)
 
         missing_docs = []
         for d in all_docs:
@@ -138,8 +171,7 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
             if dokid and dokid not in existing_dict:
                 missing_docs.append(d)
 
-        year = start_date.year if start_date else "unknown"
-        missing_file = f"missing_{year}.json"
+        missing_file = f"../../data/archive/missing_{year}.json"
 
         print(f"[INFO] Fant {len(missing_docs)} manglende dokumenter.")
         atomic_write(missing_file, missing_docs)
@@ -147,12 +179,13 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
         print("[INFO] Repair fullført.")
         return
 
-    # -------------------------
-    # NORMAL MODUS
-    # -------------------------
+    # ---------------------------------------------------------
+    # NORMAL MODES
+    # ---------------------------------------------------------
     atomic_write(FILTERED_FILE, all_docs)
 
     if mode == "publish":
+        from utils_files import load_all_postliste
         existing_dict, _ = load_all_postliste()
         merge_and_save_sharded(existing_dict, all_docs)
         print("[INFO] Oppdatert shard-basert hoveddatasett.")
