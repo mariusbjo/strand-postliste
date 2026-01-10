@@ -81,31 +81,34 @@ jobs:
             "01.01.${YEAR}" \
             "31.12.${YEAR}"
 
-      - name: Flytt missing-fil til archive
+      - name: Commit og push missing- og failed-pages-filer
         run: |
           YEAR="${{ github.event.inputs.year }}"
           mkdir -p data/archive
 
-          if [ -f missing_${YEAR}.json ]; then
-            mv missing_${YEAR}.json data/archive/missing_${YEAR}.json
-            echo "[INFO] missing_${YEAR}.json flyttet til data/archive/"
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+          echo "=== Sjekker etter nye filer i archive/ ==="
+
+          # Missing-fil
+          if [ -f data/archive/missing_${YEAR}.json ]; then
+            echo "[INFO] Fant missing_${YEAR}.json"
+            git add data/archive/missing_${YEAR}.json
           else
             echo "[INFO] Ingen missing-fil funnet."
           fi
 
-      - name: Commit og push missing-fil
-        run: |
-          YEAR="${{ github.event.inputs.year }}"
+          # Failed pages-fil
+          if [ -f data/archive/failed_pages_${YEAR}.json ]; then
+            echo "[INFO] Fant failed_pages_${YEAR}.json"
+            git add data/archive/failed_pages_${YEAR}.json
+          else
+            echo "[INFO] Ingen failed_pages-fil funnet."
+          fi
 
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-
-          echo "=== Endringer i data/archive/ ==="
-          git status data/archive/
-
-          git add data/archive/missing_${YEAR}.json || true
-
-          git commit -m "Repair-scrape for år ${YEAR} – missing_${YEAR}.json lagret i archive" || echo "Ingen endringer å committe"
+          echo "=== Committer endringer (hvis noen) ==="
+          git commit -m "Repair-scrape for år ${YEAR} – oppdaterte missing/failed_pages" || echo "Ingen endringer å committe"
 
           git pull --rebase origin main || true
           git push origin main || true
