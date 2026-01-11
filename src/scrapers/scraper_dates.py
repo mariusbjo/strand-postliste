@@ -10,35 +10,14 @@ from utils_files import (
     load_config,
     merge_and_save_sharded,
     atomic_write,
+    load_archive_year,
+    append_missing,
+    save_failed_pages,
 )
 from scraper_core_async import hent_side_async
 
 DEFAULT_CONFIG_FILE = "../config/config.json"
 FILTERED_FILE = "../../data/postliste_filtered.json"
-
-
-# ---------------------------------------------------------
-# LOAD ARCHIVE YEAR (instead of shards)
-# ---------------------------------------------------------
-def load_archive_year(year):
-    archive_files = glob.glob(f"../../data/archive/postliste_{year}_*.json")
-    existing = {}
-
-    print(f"[INFO] Leser archive-filer for år {year}…")
-
-    for f in archive_files:
-        try:
-            with open(f, "r", encoding="utf-8") as infile:
-                docs = json.load(infile)
-                for d in docs:
-                    dokid = d.get("dokumentID")
-                    if dokid:
-                        existing[dokid] = d
-        except Exception as e:
-            print(f"[WARN] Klarte ikke å lese {f}: {e}")
-
-    print(f"[INFO] Totalt {len(existing)} dokumenter funnet i archive for {year}")
-    return existing
 
 
 # ---------------------------------------------------------
@@ -179,15 +158,17 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
             if dokid and dokid not in existing_dict:
                 missing_docs.append(d)
 
-        missing_file = f"../../data/archive/missing_{year}.json"
-        failed_file = f"../../data/archive/failed_pages_{year}.json"
+        print(f"[INFO] Fant {len(missing_docs)} nye manglende dokumenter.")
 
-        print(f"[INFO] Fant {len(missing_docs)} manglende dokumenter.")
-        atomic_write(missing_file, missing_docs)
+        # Append + dedupe missing_<year>.json
+        append_missing(year, missing_docs)
 
+        # Overskriv failed_pages_<year>.json med gjeldende feilliste
         if failed_pages:
-            print(f"[INFO] Lagrer {len(failed_pages)} feilede sider i {failed_file}")
-            atomic_write(failed_file, failed_pages)
+            print(f"[INFO] Lagrer {len(failed_pages)} feilede sider for {year}")
+            save_failed_pages(year, failed_pages)
+        else:
+            print(f"[INFO] Ingen feilede sider å lagre for {year}.")
 
         print("[INFO] Repair fullført.")
         return
