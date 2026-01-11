@@ -48,6 +48,105 @@ def atomic_write(path, data):
 
 
 # ------------------------------------------------------------------
+#  Archive-hjelpere
+# ------------------------------------------------------------------
+
+def load_archive_year(year):
+    """
+    Leser alle archive-filer for et gitt år:
+      data/archive/postliste_<year>_*.json
+
+    Returnerer:
+      dict { dokumentID: dokument }
+    """
+    archive_dir = DATA_DIR / "archive"
+    archive_files = sorted(archive_dir.glob(f"postliste_{year}_*.json"))
+    existing = {}
+
+    print(f"[INFO] Leser archive-filer for år {year}…")
+
+    for f in archive_files:
+        try:
+            with f.open("r", encoding="utf-8") as infile:
+                docs = json.load(infile)
+                for d in docs:
+                    if not isinstance(d, dict):
+                        continue
+                    dokid = d.get("dokumentID")
+                    if dokid:
+                        existing[dokid] = d
+        except Exception as e:
+            print(f"[WARN] Klarte ikke å lese {f}: {e}")
+
+    print(f"[INFO] Totalt {len(existing)} dokumenter funnet i archive for {year}")
+    return existing
+
+
+def append_missing(year, new_docs):
+    """
+    Append'er nye manglende dokumenter til missing_<year>.json
+    og deduper på dokumentID.
+
+    Resultat:
+      data/archive/missing_<year>.json
+      inneholder ALL historisk missing, uten duplikater.
+    """
+    if not new_docs:
+        print(f"[INFO] Ingen nye missing-dokumenter å lagre for {year}.")
+        return
+
+    archive_dir = DATA_DIR / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    missing_path = archive_dir / f"missing_{year}.json"
+
+    existing_docs = []
+    if missing_path.exists():
+        try:
+            existing_docs = json.loads(missing_path.read_text(encoding="utf-8"))
+            if not isinstance(existing_docs, list):
+                existing_docs = []
+        except Exception as e:
+            print(f"[WARN] Klarte ikke å lese eksisterende missing-fil {missing_path}: {e}")
+            existing_docs = []
+
+    merged_by_id = {}
+
+    for d in existing_docs:
+        if isinstance(d, dict):
+            did = d.get("dokumentID")
+            if did:
+                merged_by_id[did] = d
+
+    for d in new_docs:
+        if isinstance(d, dict):
+            did = d.get("dokumentID")
+            if did:
+                merged_by_id[did] = d
+
+    final_list = list(merged_by_id.values())
+    atomic_write(missing_path, final_list)
+    print(f"[INFO] Lagret/oppdatert missing_{year}.json med totalt {len(final_list)} dokumenter.")
+
+
+def save_failed_pages(year, failed_pages):
+    """
+    Overskriver failed_pages_<year>.json med dagens liste
+    over feilede sider.
+
+    Resultat:
+      data/archive/failed_pages_<year>.json
+      gjenspeiler TIL ENHVER TID gjenværende feilede sider.
+    """
+    archive_dir = DATA_DIR / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    failed_path = archive_dir / f"failed_pages_{year}.json"
+    atomic_write(failed_path, failed_pages)
+    print(f"[INFO] Lagret failed_pages_{year}.json med {len(failed_pages)} sider.")
+
+
+# ------------------------------------------------------------------
 #  Sharding: postliste_1.json, postliste_2.json, ...
 # ------------------------------------------------------------------
 
