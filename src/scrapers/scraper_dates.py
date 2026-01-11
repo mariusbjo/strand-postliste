@@ -158,28 +158,24 @@ async def run_scrape_async(start_date=None, end_date=None, config_path=DEFAULT_C
     # ---------------------------------------------------------
     if mode == "repair":
         print("[INFO] Repair-modus aktivert. Leser archive…")
-
+    
         year = start_date.year if start_date else "unknown"
-        existing_dict = load_archive_year(year)
-
-        missing_docs = []
-        for d in all_docs:
-            dokid = d.get("dokumentID")
-            if dokid and dokid not in existing_dict:
-                missing_docs.append(d)
-
+    
+        # 1. Last archive
+        archive_dict = load_archive_year(year)
+    
+        # 2. Finn missing
+        from utils_files import find_missing_docs
+        missing_docs = find_missing_docs(all_docs, archive_dict)
+    
         print(f"[INFO] Fant {len(missing_docs)} nye manglende dokumenter.")
-
-        # Append + dedupe missing_<year>.json
+    
+        # 3. Append + dedupe missing_<year>.json
         append_missing(year, missing_docs)
-
-        # Overskriv failed_pages_<year>.json med gjeldende feilliste
-        if failed_pages:
-            print(f"[INFO] Lagrer {len(failed_pages)} feilede sider for {year}")
-            save_failed_pages(year, failed_pages)
-        else:
-            print(f"[INFO] Ingen feilede sider å lagre for {year}.")
-
+    
+        # 4. Overskriv failed_pages_<year>.json
+        save_failed_pages(year, failed_pages)
+    
         print("[INFO] Repair fullført.")
         return
 
