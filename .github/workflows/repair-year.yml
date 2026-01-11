@@ -67,53 +67,53 @@ jobs:
         run: |
           YEAR="${{ github.event.inputs.year }}"
           RETRY="${{ github.event.inputs.retry_failed }}"
-      
+
           mkdir -p src/config
-      
+
           if [ "$RETRY" = "true" ]; then
             echo "=== RETRY-MODUS AKTIVERT ==="
             FAILED_FILE="data/archive/failed_pages_${YEAR}.json"
-      
+
             if [ ! -f "$FAILED_FILE" ]; then
               echo "[ERROR] Ingen failed_pages_${YEAR}.json funnet. Kan ikke kjøre retry."
               exit 1
             fi
-      
+
             echo "[INFO] Leser feilede sider fra $FAILED_FILE"
-      
+
             START=$(jq 'min' "$FAILED_FILE")
             END=$(jq 'max' "$FAILED_FILE")
-      
+
             echo "[INFO] Retry-scrape vil kjøre fra side $START til $END"
-      
-      cat <<EOF > src/config/config_repair.json
-      {
-        "start_page": $START,
-        "max_pages": $END,
-        "per_page": 100
-      }
-      EOF
-      
+
+cat <<EOF > src/config/config_repair.json
+{
+  "start_page": $START,
+  "max_pages": $END,
+  "per_page": 100
+}
+EOF
+
           else
             echo "=== MANUELL MODUS ==="
             START="${{ github.event.inputs.start_page }}"
             END="${{ github.event.inputs.max_pages }}"
-      
+
             if [ -z "$START" ] || [ -z "$END" ]; then
               echo "[ERROR] start_page og max_pages må settes når retry_failed=false"
               exit 1
             fi
-      
-      cat <<EOF > src/config/config_repair.json
-      {
-        "start_page": $START,
-        "max_pages": $END,
-        "per_page": 100
-      }
-      EOF
-      
+
+cat <<EOF > src/config/config_repair.json
+{
+  "start_page": $START,
+  "max_pages": $END,
+  "per_page": 100
+}
+EOF
+
           fi
-      
+
           echo "=== INNHOLD I config_repair.json ==="
           cat src/config/config_repair.json
 
