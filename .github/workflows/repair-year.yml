@@ -86,7 +86,7 @@ jobs:
       
             echo "[INFO] Retry-scrape vil kjøre fra side $START til $END"
       
-            cat <<EOF > src/config/config_repair.json
+      cat <<EOF > src/config/config_repair.json
       {
         "start_page": $START,
         "max_pages": $END,
@@ -104,7 +104,7 @@ jobs:
               exit 1
             fi
       
-            cat <<EOF > src/config/config_repair.json
+      cat <<EOF > src/config/config_repair.json
       {
         "start_page": $START,
         "max_pages": $END,
